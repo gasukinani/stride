@@ -31,16 +31,16 @@ jobs:
 
       - name: Force Use .NET 8 (Pin SDK)
         run: |
-          dotnet --version
           dotnet new globaljson --sdk-version 8.0.406 --roll-forward latestFeature --force
 
       - name: Install Android Workload
         run: |
           dotnet workload install android
 
-      - name: Restore NuGet Dependencies
+      - name: Restore NuGet Dependencies directly from NuGet.org
         run: |
-          dotnet restore sources/editor/Stride.Editor.Android/Stride.Editor.Android.csproj
+          dotnet restore sources/editor/Stride.Editor.Android/Stride.Editor.Android.csproj \
+            --source https://api.nuget.org/v3/index.json
 
       - name: Build & Publish Android APK
         run: |
@@ -49,6 +49,7 @@ jobs:
             -f net8.0-android \
             -p:AndroidPackageFormat=apk \
             -p:AndroidEnablePrebuildValidation=false \
+            --source https://api.nuget.org/v3/index.json \
             -o output/
 
       - name: Upload APK as Artifact
