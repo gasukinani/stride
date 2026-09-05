@@ -5,7 +5,7 @@ on:
     branches: [ "master", "main", "develop" ]
   pull_request:
     branches: [ "master", "main", "develop" ]
-  workflow_dispatch: # Pinapayagan kang i-click ang "Run workflow" nang mano-mano
+  workflow_dispatch:
 
 jobs:
   build-apk:
@@ -28,6 +28,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Force Use .NET 8 (Pin SDK)
+        run: |
+          dotnet --version
+          dotnet new globaljson --sdk-version 8.0.406 --roll-forward latestFeature --force
 
       - name: Install Android Workload
         run: |
