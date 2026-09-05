@@ -5,7 +5,9 @@ using Android.Content.PM;
 using Android.Graphics;
 using Android.OS;
 using Android.Util;
+using Android.Views;
 using Android.Widget;
+using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Starter;
 
@@ -18,119 +20,249 @@ namespace Stride.Editor.Android;
     ScreenOrientation = ScreenOrientation.Landscape)]
 public class MainActivity : StrideActivity
 {
-    private Game? _game;
-    private bool _isEngineStarted = false;
+    private EditorGame? _editor;
+    private bool _engineInitialized = false;
+
+    // UI Controls para sa Editor
+    private LinearLayout? _hierarchyPanel;
+    private TextView? _inspectorTitle;
+    private EditText? _posXInput, _posYInput, _posZInput;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        // Tagasalo ng unhandled exceptions
         AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
         {
-            var ex = args.ExceptionObject?.ToString() ?? "Unknown exception";
-            Log.Error("StrideCrash", ex);
-            ShowCrash(ex);
+            Log.Error("StrideEditorCrash", args.ExceptionObject?.ToString() ?? "Unknown exception");
         };
 
         base.OnCreate(savedInstanceState);
-        // Hayaan munang matapos ang OnCreate nang HINDI tinatawag ang _game.Run dito
     }
 
     public override void OnWindowFocusChanged(bool hasFocus)
     {
         base.OnWindowFocusChanged(hasFocus);
 
-        // Sisimulan lamang kapag nakalabas na sa screen ang window at may focus na
-        if (hasFocus && !_isEngineStarted)
+        if (hasFocus && !_engineInitialized)
         {
-            _isEngineStarted = true;
-            StartGameEngineAsync();
+            _engineInitialized = true;
+            InitializeEditorAsync();
         }
     }
 
-    private void StartGameEngineAsync()
+    private void InitializeEditorAsync()
     {
-        // KRITIKAL: Patakbuhin sa BACKGROUND THREAD gamit ang Task.Run
-        // HUWAG gagamit ng RunOnUiThread dito dahil iba-block nito ang Android Looper
         Task.Run(async () =>
         {
-            const int maxRetries = 10;
-            int attempts = 0;
+            const int maxRetries = 12;
+            int attempt = 0;
 
-            while (attempts < maxRetries)
+            while (attempt < maxRetries)
             {
                 try
                 {
-                    // Bigyan ng 200-400ms ang Android OS para mai-bind ng SDL SurfaceView ang ANativeWindow
-                    await Task.Delay(200 + (attempts * 150));
+                    // Hintaying ma-bind ng Android ang hardware window sa JNI
+                    await Task.Delay(250 + (attempt * 150));
 
-                    _game = new Game();
+                    _editor = new EditorGame();
 
-                    // Ito ay magsisilbing blocking render loop sa background thread
-                    _game.Run();
+                    // I-hook ang mga Editor Events papuntang Android UI
+                    _editor.OnHierarchyChanged += (entities) =>
+                    {
+                        RunOnUiThread(() => RefreshHierarchyUI(entities));
+                    };
 
-                    // Kung maayos na nag-exit ang game loop
+                    _editor.OnEntitySelected += (entity) =>
+                    {
+                        RunOnUiThread(() => RefreshInspectorUI(entity));
+                    };
+
+                    // Mag-inject ng Editor UI Layout sa screen pagkasimula ng window
+                    RunOnUiThread(() => BuildEditorOverlay());
+
+                    // Blocking call ng Stride graphics pipeline (sa background thread lamang!)
+                    _editor.Run();
                     break;
                 }
-                catch (Exception ex) when (ex.Message.Contains("native window", StringComparison.OrdinalIgnoreCase) && attempts < maxRetries - 1)
+                catch (Exception ex) when (ex.Message.Contains("native window", StringComparison.OrdinalIgnoreCase) && attempt < maxRetries - 1)
                 {
-                    attempts++;
-                    Log.Warn("StrideEditor", $"Naglalaan pa ang Android ng Native Window... Pagsubok muli ({attempts}/{maxRetries})");
-
-                    try
-                    {
-                        _game?.Dispose();
-                    }
-                    catch { }
-                    _game = null;
+                    attempt++;
+                    Log.Warn("StrideEditor", $"Inihahanda ang Surface... Retry {attempt}/{maxRetries}");
+                    _editor?.Dispose();
+                    _editor = null;
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("StrideCrash", ex.ToString());
-                    ShowCrash(ex.ToString());
+                    Log.Error("StrideEditorCrash", ex.ToString());
+                    RunOnUiThread(() => ShowCrashDialog(ex.ToString()));
                     break;
                 }
             }
         });
     }
 
-    private void ShowCrash(string message)
-    {
-        RunOnUiThread(() =>
-        {
-            try
-            {
-                var scroll = new ScrollView(this);
-                var text = new TextView(this)
-                {
-                    Text = "⚠️ STRIDE CRASH DETAILS:\n\n" + message,
-                    TextSize = 13
-                };
-                text.SetTextColor(Color.Red);
-                text.SetBackgroundColor(Color.Black);
-                text.SetPadding(40, 40, 40, 40);
+    // ==========================================
+    // STRIDE EDITOR INTERFACE (Android UI OVERLAY)
+    // ==========================================
 
-                scroll.AddView(text);
-                SetContentView(scroll);
-            }
-            catch
+    private void BuildEditorOverlay()
+    {
+        var rootLayout = new RelativeLayout(this)
+        {
+            LayoutParameters = new RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.MatchParent,
+                ViewGroup.LayoutParams.MatchParent)
+        };
+
+        // 1. TOP TOOLBAR
+        var toolbar = new LinearLayout(this)
+        {
+            Orientation = Orientation.Horizontal
+        };
+        toolbar.SetBackgroundColor(Android.Graphics.Color.Argb(220, 25, 25, 25));
+        toolbar.SetPadding(20, 10, 20, 10);
+
+        var btnAddCube = CreateButton("+ Cube");
+        btnAddCube.Click += (s, e) => _editor?.CreatePrimitive(EditorGame.PrimitiveType.Cube, "Cube_" + DateTime.Now.Second, new Vector3(0, 1, 0), Vector3.One);
+
+        var btnAddSphere = CreateButton("+ Sphere");
+        btnAddSphere.Click += (s, e) => _editor?.CreatePrimitive(EditorGame.PrimitiveType.Sphere, "Sphere_" + DateTime.Now.Second, new Vector3(0, 1, 0), Vector3.One);
+
+        toolbar.AddView(btnAddCube);
+        toolbar.AddView(btnAddSphere);
+
+        var toolbarParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent);
+        toolbarParams.AddRule(LayoutRules.AlignParentTop);
+        rootLayout.AddView(toolbar, toolbarParams);
+
+        // 2. LEFT PANEL: SCENE HIERARCHY
+        _hierarchyPanel = new LinearLayout(this)
+        {
+            Orientation = Orientation.Vertical
+        };
+        _hierarchyPanel.SetBackgroundColor(Android.Graphics.Color.Argb(200, 35, 35, 35));
+        _hierarchyPanel.SetPadding(20, 20, 20, 20);
+
+        var hierarchyTitle = new TextView(this) { Text = "📂 SCENE HIERARCHY", TextSize = 14 };
+        hierarchyTitle.SetTextColor(Android.Graphics.Color.Yellow);
+        _hierarchyPanel.AddView(hierarchyTitle);
+
+        var hierarchyScroll = new ScrollView(this);
+        hierarchyScroll.AddView(_hierarchyPanel);
+
+        var hierarchyParams = new RelativeLayout.LayoutParams(400, ViewGroup.LayoutParams.MatchParent);
+        hierarchyParams.AddRule(LayoutRules.AlignParentLeft);
+        hierarchyParams.TopMargin = 100;
+        rootLayout.AddView(hierarchyScroll, hierarchyParams);
+
+        // 3. RIGHT PANEL: INSPECTOR
+        var inspectorLayout = new LinearLayout(this)
+        {
+            Orientation = Orientation.Vertical
+        };
+        inspectorLayout.SetBackgroundColor(Android.Graphics.Color.Argb(200, 35, 35, 35));
+        inspectorLayout.SetPadding(20, 20, 20, 20);
+
+        _inspectorTitle = new TextView(this) { Text = "⚙️ INSPECTOR: (No Selection)", TextSize = 14 };
+        _inspectorTitle.SetTextColor(Android.Graphics.Color.Cyan);
+        inspectorLayout.AddView(_inspectorTitle);
+
+        var posLabel = new TextView(this) { Text = "Position (X, Y, Z):" };
+        posLabel.SetTextColor(Android.Graphics.Color.White);
+        inspectorLayout.AddView(posLabel);
+
+        _posXInput = CreateNumberInput("0");
+        _posYInput = CreateNumberInput("0");
+        _posZInput = CreateNumberInput("0");
+
+        var applyBtn = CreateButton("Apply Transform");
+        applyBtn.Click += (s, e) =>
+        {
+            if (float.TryParse(_posXInput.Text, out float x) &&
+                float.TryParse(_posYInput.Text, out float y) &&
+                float.TryParse(_posZInput.Text, out float z))
             {
-                // Fallback kapag sira na ang activity state
+                _editor?.UpdateEntityPosition(new Vector3(x, y, z));
             }
-        });
+        };
+
+        inspectorLayout.AddView(_posXInput);
+        inspectorLayout.AddView(_posYInput);
+        inspectorLayout.AddView(_posZInput);
+        inspectorLayout.AddView(applyBtn);
+
+        var inspectorParams = new RelativeLayout.LayoutParams(420, ViewGroup.LayoutParams.MatchParent);
+        inspectorParams.AddRule(LayoutRules.AlignParentRight);
+        inspectorParams.TopMargin = 100;
+        rootLayout.AddView(inspectorLayout, inspectorParams);
+
+        // Idagdag ang Editor UI overlay sa itaas ng Stride Activity
+        AddContentView(rootLayout, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent));
+    }
+
+    private void RefreshHierarchyUI(System.Collections.Generic.List<Entity> entities)
+    {
+        if (_hierarchyPanel == null) return;
+
+        // Iwan ang title
+        while (_hierarchyPanel.ChildCount > 1)
+        {
+            _hierarchyPanel.RemoveViewAt(1);
+        }
+
+        foreach (var entity in entities)
+        {
+            var itemBtn = new Button(this)
+            {
+                Text = "📦 " + entity.Name,
+                TextSize = 12
+            };
+            itemBtn.SetBackgroundColor(Android.Graphics.Color.Argb(180, 50, 50, 50));
+            itemBtn.SetTextColor(Android.Graphics.Color.White);
+            itemBtn.Click += (s, e) => _editor?.SelectEntity(entity);
+            _hierarchyPanel.AddView(itemBtn);
+        }
+    }
+
+    private void RefreshInspectorUI(Entity? entity)
+    {
+        if (entity == null || _inspectorTitle == null) return;
+
+        _inspectorTitle.Text = "⚙️ " + entity.Name;
+        _posXInput!.Text = entity.Transform.Position.X.ToString("F2");
+        _posYInput!.Text = entity.Transform.Position.Y.ToString("F2");
+        _posZInput!.Text = entity.Transform.Position.Z.ToString("F2");
+    }
+
+    private Button CreateButton(string text)
+    {
+        var btn = new Button(this) { Text = text };
+        btn.SetTextColor(Android.Graphics.Color.White);
+        btn.SetBackgroundColor(Android.Graphics.Color.Argb(255, 60, 60, 60));
+        return btn;
+    }
+
+    private EditText CreateNumberInput(string val)
+    {
+        var edit = new EditText(this) { Text = val };
+        edit.SetTextColor(Android.Graphics.Color.White);
+        edit.SetBackgroundColor(Android.Graphics.Color.Argb(150, 20, 20, 20));
+        edit.InputType = Android.Text.InputTypes.ClassNumber | Android.Text.InputTypes.NumberFlagDecimal | Android.Text.InputTypes.NumberFlagSigned;
+        return edit;
+    }
+
+    private void ShowCrashDialog(string error)
+    {
+        new AlertDialog.Builder(this)
+            .SetTitle("Editor Exception")
+            .SetMessage(error)
+            .SetPositiveButton("OK", (s, e) => { })
+            .Show();
     }
 
     protected override void OnDestroy()
     {
-        try
-        {
-            _game?.Dispose();
-            _game = null;
-        }
-        catch (Exception ex)
-        {
-            Log.Warn("StrideEditor", $"Error habang nagdi-dispose: {ex.Message}");
-        }
-
+        _editor?.Dispose();
+        _editor = null;
         base.OnDestroy();
     }
 }
