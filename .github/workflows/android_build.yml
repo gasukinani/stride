@@ -39,12 +39,12 @@ jobs:
       # Dito nakalagay ang solusyon: build/Stride.Android.sln
       - name: Restore Dependencies
         run: |
-          dotnet restore build/Stride.Android.sln /p:StridePlatform=Android
+          dotnet restore build/Stride.Android.slnf /p:StridePlatform=Android
 
       # Build Stride Android solution
       - name: Attempt Build for Android Platform
         run: |
-          dotnet build build/Stride.Android.sln -c Release /p:StridePlatform=Android
+          dotnet build build/Stride.Android.slnf -c Release /p:StridePlatform=Android
 
       # Maghahanap kung may nalikhang .apk o Android binaries
       - name: Find and Upload Artifacts
