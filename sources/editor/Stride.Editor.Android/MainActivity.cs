@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Android.App;
 using Android.Content.PM;
 using Android.Graphics;
@@ -18,10 +19,11 @@ namespace Stride.Editor.Android;
 public class MainActivity : StrideActivity
 {
     private Game? _game;
+    private bool _isEngineStarted = false;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        // Saluhin ang mga hindi inaasahang crash sa C# domain
+        // Tagasalo ng unhandled exceptions
         AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
         {
             var ex = args.ExceptionObject?.ToString() ?? "Unknown exception";
@@ -30,21 +32,65 @@ public class MainActivity : StrideActivity
         };
 
         base.OnCreate(savedInstanceState);
+        // Hayaan munang matapos ang OnCreate nang HINDI tinatawag ang _game.Run dito
+    }
 
-        try
-        {
-            // 1. Gumawa ng instance ng Stride Game
-            _game = new Game();
+    public override void OnWindowFocusChanged(bool hasFocus)
+    {
+        base.OnWindowFocusChanged(hasFocus);
 
-            // 2. IMPORTANT: Ipasa ang GameContext mula sa StrideActivity
-            // Ang StrideActivity na ang bahalang mag-manage ng render loop
-            _game.Run(GameContext);
-        }
-        catch (Exception ex)
+        // Sisimulan lamang kapag nakalabas na sa screen ang window at may focus na
+        if (hasFocus && !_isEngineStarted)
         {
-            Log.Error("StrideCrash", ex.ToString());
-            ShowCrash(ex.ToString());
+            _isEngineStarted = true;
+            StartGameEngineAsync();
         }
+    }
+
+    private void StartGameEngineAsync()
+    {
+        // KRITIKAL: Patakbuhin sa BACKGROUND THREAD gamit ang Task.Run
+        // HUWAG gagamit ng RunOnUiThread dito dahil iba-block nito ang Android Looper
+        Task.Run(async () =>
+        {
+            const int maxRetries = 10;
+            int attempts = 0;
+
+            while (attempts < maxRetries)
+            {
+                try
+                {
+                    // Bigyan ng 200-400ms ang Android OS para mai-bind ng SDL SurfaceView ang ANativeWindow
+                    await Task.Delay(200 + (attempts * 150));
+
+                    _game = new Game();
+
+                    // Ito ay magsisilbing blocking render loop sa background thread
+                    _game.Run();
+
+                    // Kung maayos na nag-exit ang game loop
+                    break;
+                }
+                catch (Exception ex) when (ex.Message.Contains("native window", StringComparison.OrdinalIgnoreCase) && attempts < maxRetries - 1)
+                {
+                    attempts++;
+                    Log.Warn("StrideEditor", $"Naglalaan pa ang Android ng Native Window... Pagsubok muli ({attempts}/{maxRetries})");
+
+                    try
+                    {
+                        _game?.Dispose();
+                    }
+                    catch { }
+                    _game = null;
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("StrideCrash", ex.ToString());
+                    ShowCrash(ex.ToString());
+                    break;
+                }
+            }
+        });
     }
 
     private void ShowCrash(string message)
@@ -68,7 +114,7 @@ public class MainActivity : StrideActivity
             }
             catch
             {
-                // Fallback kung sira na ang activity state
+                // Fallback kapag sira na ang activity state
             }
         });
     }
@@ -82,7 +128,7 @@ public class MainActivity : StrideActivity
         }
         catch (Exception ex)
         {
-            Log.Warn("StrideEditor", $"Error during game dispose: {ex.Message}");
+            Log.Warn("StrideEditor", $"Error habang nagdi-dispose: {ex.Message}");
         }
 
         base.OnDestroy();
