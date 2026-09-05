@@ -1,6 +1,9 @@
+using System;
 using Android.App;
 using Android.Content.PM;
+using Android.Graphics;
 using Android.OS;
+using Android.Widget;
 using Stride.Engine;
 using Stride.Starter;
 
@@ -19,9 +22,40 @@ public class MainActivity : StrideActivity
     {
         base.OnCreate(savedInstanceState);
 
-        // Tamang syntax: lowercase variable at game.Run()
-        _game = new Game();
-        _game.Run();
+        // Sinasalo ang anumang unhandled crash
+        AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
+        {
+            ShowCrash(args.ExceptionObject?.ToString() ?? "Unknown exception");
+        };
+
+        try
+        {
+            _game = new Game();
+            _game.Run();
+        }
+        catch (Exception ex)
+        {
+            ShowCrash(ex.ToString());
+        }
+    }
+
+    private void ShowCrash(string message)
+    {
+        RunOnUiThread(() =>
+        {
+            var scroll = new ScrollView(this);
+            var text = new TextView(this)
+            {
+                Text = "⚠️ STRIDE CRASH DETAILS:\n\n" + message,
+                TextSize = 14
+            };
+            text.SetTextColor(Color.Red);
+            text.SetBackgroundColor(Color.Black);
+            text.SetPadding(30, 30, 30, 30);
+
+            scroll.AddView(text);
+            SetContentView(scroll);
+        });
     }
 
     protected override void OnDestroy()
