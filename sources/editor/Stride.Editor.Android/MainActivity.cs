@@ -5,6 +5,7 @@ using Android.Graphics;
 using Android.OS;
 using Android.Widget;
 using Stride.Engine;
+using Stride.Games;
 using Stride.Starter;
 
 namespace Stride.Editor.Android;
@@ -22,7 +23,6 @@ public class MainActivity : StrideActivity
     {
         base.OnCreate(savedInstanceState);
 
-        // Sinasalo ang anumang unhandled crash
         AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
         {
             ShowCrash(args.ExceptionObject?.ToString() ?? "Unknown exception");
@@ -31,7 +31,11 @@ public class MainActivity : StrideActivity
         try
         {
             _game = new Game();
-            _game.Run();
+
+            // Ipinapasa natin ang mismong Activity ('this') sa GameContext 
+            // para makuha ni SDL ang tamang native window surface ng screen
+            var context = GameContextFactory.NewGameContextAndroid(this);
+            _game.Run(context);
         }
         catch (Exception ex)
         {
