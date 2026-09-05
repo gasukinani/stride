@@ -8,12 +8,15 @@
     <ApplicationId>com.gasukinani.stride.editor</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-
-    <!-- Pinapayagan ang unsafe code na kailangan ng graphics engine -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Fix para sa Error NETSDK1202 -->
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+
+    <!-- Fix para sa Error NU1008 (Pinapayagan tayong maglagay ng Version dito) -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
-  <!-- Dito pumapasok ang Stride Engine -->
   <ItemGroup>
     <PackageReference Include="Stride.Engine" Version="4.2.0.2232" />
     <PackageReference Include="Stride.Graphics" Version="4.2.0.2232" />
