@@ -1,11 +1,4 @@
-name: Build Windows (Full, VS MSBuild)
-
-# Desktop-MSBuild fidelity check: builds Stride.slnx the way Visual Studio does —
-# .NET Framework MSBuild engine, separate restore (no dotnet-build sugar), VS dev
-# environment so VCINSTALLDIR selects the MSVC native build mode (the
-# WindowsDesktop.vcxproj link path VS users get with the C++ workload). Everything
-# else in CI uses dotnet build (core MSBuild), so without this job the engine that
-# all VS users run would be exercised only at release time.
+name: Build Android (Full, VS MSBuild)
 
 on:
   schedule:
@@ -14,56 +7,86 @@ on:
     inputs:
       build-type:
         description: Build Configuration
-        default: Debug
+        default: Release
         type: choice
         options:
           - Debug
           - Release
   pull_request:
-    # Build-logic paths only: the places engine-compat regressions actually come from.
     paths:
       - 'sources/sdk/**'
       - 'sources/targets/**'
       - 'sources/native/**'
-      - '.github/workflows/build-windows-full-msbuild.yml'
+      - '.github/workflows/build-android-full-msbuild.yml'
 
 concurrency:
-  group: build-windows-full-msbuild-${{ github.event.pull_request.number || github.ref }}
+  group: build-android-full-msbuild-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  Windows-MSBuild:
-    name: Windows Full (VS MSBuild, ${{ github.event.inputs.build-type || 'Debug' }})
+  Android-MSBuild:
+    name: Android Full (VS MSBuild, ${{ github.event.inputs.build-type || 'Release' }})
     if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
-    runs-on: windows-2025-vs2026
-    timeout-minutes: 60
+    runs-on: windows-latest
+    timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           lfs: true
           submodules: true
-      # VsDevCmd environment (VCINSTALLDIR etc.), exported for the following steps.
+
+      # Kailangan ng Android build ang Java JDK
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # Android SDK at platform tools
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # I-install ang Android workload para sa .NET / MSBuild
+      - name: Install .NET Android Workload
+        run: |
+          dotnet workload install android
+
+      # VsDevCmd environment para sa native toolchain
       - uses: ilammy/msvc-dev-cmd@v1
+
       - name: Restore
-        # VS restores via its NuGet integration before building; bare /t:Restore is the
-        # CLI equivalent. Same properties as Build so the TFM graph matches.
         run: |
           msbuild build\Stride.slnx `
             /t:Restore `
             /m /nr:false /v:m /p:WarningLevel=0 `
-            /p:Configuration=${{ github.event.inputs.build-type || 'Debug' }} `
+            /p:Configuration=${{ github.event.inputs.build-type || 'Release' }} `
             /p:Platform="Any CPU" `
-            /p:StridePlatforms=Windows `
+            /p:StridePlatforms=Android `
             /p:StrideGraphicsApiDependentBuildAll=true `
             /p:StrideSkipUnitTests=true `
             /p:StrideSkipAutoPack=true
+
       - name: Build
         run: |
           msbuild build\Stride.slnx `
             /m /nr:false /v:m /p:WarningLevel=0 `
-            /p:Configuration=${{ github.event.inputs.build-type || 'Debug' }} `
+            /p:Configuration=${{ github.event.inputs.build-type || 'Release' }} `
             /p:Platform="Any CPU" `
-            /p:StridePlatforms=Windows `
+            /p:StridePlatforms=Android `
             /p:StrideGraphicsApiDependentBuildAll=true `
             /p:StrideSkipUnitTests=true `
+            /p:StrideSkipAutoPack=true `
+            /p:AndroidPackageFormat=apk
+
+      # Kukunin ang anumang .apk o nabuong Android packages
+      - name: Upload Android Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Stride-Android-Output
+          path: |
+            **/*.apk
+            **/*.aab
+            bin/**/*.dll
+          if-no-files-found: warn            /p:StrideSkipUnitTests=true `
             /p:StrideSkipAutoPack=true
