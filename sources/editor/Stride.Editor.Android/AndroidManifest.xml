@@ -4,13 +4,11 @@
     android:versionCode="1"
     android:versionName="1.0">
 
-  <!-- Minimum Android 8.0 (API 26) para sa Stride Engine -->
-  <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
+  <!-- Ginawang 33 para maiwasan ang SecurityException sa Android 14/15 -->
+  <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
-  <!-- Internet access para sa asset streaming / debugging -->
   <uses-permission android:name="android.permission.INTERNET" />
 
-  <!-- Kinakailangan para sa 3D rendering ng Stride (OpenGL ES 3.0 pataas) -->
   <uses-feature android:glEsVersion="0x00030000" android:required="true" />
 
   <application
