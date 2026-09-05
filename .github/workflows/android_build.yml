@@ -1,7 +1,7 @@
 name: Test Android Build
 
 on:
-  workflow_dispatch: # Para ma-click mo ang "Run" button anumang oras
+  workflow_dispatch:
   push:
     branches: [ master, main ]
 
@@ -23,7 +23,7 @@ jobs:
             8.0.x
             9.0.x
 
-      - name: Setup Java JDK (Para sa Android)
+      - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -36,22 +36,24 @@ jobs:
         run: |
           dotnet workload install android
 
+      # Dito nakalagay ang solusyon: build/Stride.Android.sln
       - name: Restore Dependencies
         run: |
-          dotnet restore Stride.sln /p:StridePlatform=Android
+          dotnet restore build/Stride.Android.sln /p:StridePlatform=Android
 
-      # Susubukang i-build ang buong Stride solution para sa Android platform
+      # Build Stride Android solution
       - name: Attempt Build for Android Platform
         run: |
-          dotnet build Stride.sln -c Release /p:StridePlatform=Android /p:AndroidPackageFormat=apk
+          dotnet build build/Stride.Android.sln -c Release /p:StridePlatform=Android
 
-      # Kung may mabubuong anumang .apk saanman sa repository, hahanapin at ia-upload ito
-      - name: Find and Upload APK (Kung may nagawa)
+      # Maghahanap kung may nalikhang .apk o Android binaries
+      - name: Find and Upload Artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Stride-Android-Result
+          name: Stride-Android-Build-Output
           path: |
             **/*.apk
             **/*.aab
+            build/**/bin/Release/**/*.dll
           if-no-files-found: warn
