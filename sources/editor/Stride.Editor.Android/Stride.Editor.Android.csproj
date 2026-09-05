@@ -10,10 +10,12 @@
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-    <!-- Fix para sa Error NETSDK1202 -->
-    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <!-- Huwag i-trim ang engine para ma-access ng Editor ang lahat ng Components -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <RunAOTCompilation>false</RunAOTCompilation>
 
-    <!-- Fix para sa Error NU1008 (Pinapayagan tayong maglagay ng Version dito) -->
+    <!-- Fix para sa NETSDK1202 at NU1008 -->
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
