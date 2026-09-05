@@ -4,16 +4,40 @@
     android:versionCode="1"
     android:versionName="1.0">
 
-  <!-- Ginawang 33 para maiwasan ang SecurityException sa Android 14/15 -->
+  <!-- Target SDK 33 para maiwasan ang SecurityException sa Android 14/15 -->
   <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
-  <uses-permission android:name="android.permission.INTERNET" />
-
+  <!-- GRAPHICS: OpenGL ES 3.0 requirement -->
   <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+  
+  <!-- HARDWARE: Tiyaking hindi ma-filter out sa mga devices na walang touch (hal. emulator/Android TV/tablet na may mouse) -->
+  <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+  <uses-feature android:name="android.hardware.vulkan.level" android:required="false" />
+
+  <!-- PERMISSIONS: Internet at File Access para sa pag-load/save ng 3D models at textures sa Editor -->
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+  <!-- Kailangan ito kung ang Editor ay mag-o-open ng project files mula sa internal/external storage -->
+  <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+
+  <!-- SCREEN SUPPORT: Suporta sa iba't ibang laki ng screen (Tablets, Foldables, Phones) -->
+  <supports-screens
+      android:smallScreens="true"
+      android:normalScreens="true"
+      android:largeScreens="true"
+      android:xlargeScreens="true"
+      android:anyDensity="true" />
 
   <application
       android:label="Stride Editor"
       android:allowBackup="true"
-      android:hasCode="true">
+      android:hasCode="true"
+      android:hardwareAccelerated="true"
+      android:largeHeap="true"
+      android:extractNativeLibs="true"
+      android:requestLegacyExternalStorage="true"
+      android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
   </application>
+
 </manifest>
