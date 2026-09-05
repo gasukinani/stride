@@ -1,9 +1,9 @@
 using System;
-using System.Threading.Tasks;
 using Android.App;
 using Android.Content.PM;
 using Android.Graphics;
 using Android.OS;
+using Android.Util;
 using Android.Widget;
 using Stride.Engine;
 using Stride.Starter;
@@ -13,80 +13,78 @@ namespace Stride.Editor.Android;
 [Activity(
     Label = "Stride Editor",
     MainLauncher = true,
-    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.KeyboardHidden,
+    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.KeyboardHidden | ConfigChanges.ScreenLayout,
     ScreenOrientation = ScreenOrientation.Landscape)]
 public class MainActivity : StrideActivity
 {
     private Game? _game;
-    private bool _isStarted = false;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        base.OnCreate(savedInstanceState);
-
-        // Sinasalo ang mga crash
+        // Saluhin ang mga hindi inaasahang crash sa C# domain
         AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
         {
-            ShowCrash(args.ExceptionObject?.ToString() ?? "Unknown exception");
+            var ex = args.ExceptionObject?.ToString() ?? "Unknown exception";
+            Log.Error("StrideCrash", ex);
+            ShowCrash(ex);
         };
-    }
 
-    public override void OnWindowFocusChanged(bool hasFocus)
-    {
-        base.OnWindowFocusChanged(hasFocus);
+        base.OnCreate(savedInstanceState);
 
-        // Hihintayin muna nating magkaroon ng focus ang screen bago simulan ang Stride Engine
-        if (hasFocus && !_isStarted)
+        try
         {
-            _isStarted = true;
-            StartGameEngine();
+            // 1. Gumawa ng instance ng Stride Game
+            _game = new Game();
+
+            // 2. IMPORTANT: Ipasa ang GameContext mula sa StrideActivity
+            // Ang StrideActivity na ang bahalang mag-manage ng render loop
+            _game.Run(GameContext);
         }
-    }
-
-    private void StartGameEngine()
-    {
-        Task.Run(async () =>
+        catch (Exception ex)
         {
-            // Bigyan ng 300ms ang Android OS para mai-attach ang Native Window sa SDL
-            await Task.Delay(300);
-
-            RunOnUiThread(() =>
-            {
-                try
-                {
-                    _game = new Game();
-                    _game.Run(); // Walang arguments para automatic ang Android context
-                }
-                catch (Exception ex)
-                {
-                    ShowCrash(ex.ToString());
-                }
-            });
-        });
+            Log.Error("StrideCrash", ex.ToString());
+            ShowCrash(ex.ToString());
+        }
     }
 
     private void ShowCrash(string message)
     {
         RunOnUiThread(() =>
         {
-            var scroll = new ScrollView(this);
-            var text = new TextView(this)
+            try
             {
-                Text = "⚠️ STRIDE CRASH DETAILS:\n\n" + message,
-                TextSize = 14
-            };
-            text.SetTextColor(Color.Red);
-            text.SetBackgroundColor(Color.Black);
-            text.SetPadding(30, 30, 30, 30);
+                var scroll = new ScrollView(this);
+                var text = new TextView(this)
+                {
+                    Text = "⚠️ STRIDE CRASH DETAILS:\n\n" + message,
+                    TextSize = 13
+                };
+                text.SetTextColor(Color.Red);
+                text.SetBackgroundColor(Color.Black);
+                text.SetPadding(40, 40, 40, 40);
 
-            scroll.AddView(text);
-            SetContentView(scroll);
+                scroll.AddView(text);
+                SetContentView(scroll);
+            }
+            catch
+            {
+                // Fallback kung sira na ang activity state
+            }
         });
     }
 
     protected override void OnDestroy()
     {
-        _game?.Dispose();
+        try
+        {
+            _game?.Dispose();
+            _game = null;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("StrideEditor", $"Error during game dispose: {ex.Message}");
+        }
+
         base.OnDestroy();
     }
 }
