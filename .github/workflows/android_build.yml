@@ -1,61 +1,57 @@
-name: Build Stride Android Engine
+name: Test Android Build
 
 on:
+  workflow_dispatch: # Para ma-click mo ang "Run" button anumang oras
   push:
-    branches: [ "master", "main", "develop" ]
-  pull_request:
-    branches: [ "master", "main", "develop" ]
-  workflow_dispatch:
+    branches: [ master, main ]
 
 jobs:
-  build-apk:
-    runs-on: ubuntu-latest
+  build-android:
+    runs-on: windows-latest
 
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
+          lfs: true
 
-      - name: Setup Java JDK 17
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Setup Java JDK (Para sa Android)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup .NET 8 SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Force Use .NET 8 (Pin SDK)
-        run: |
-          dotnet --version
-          dotnet new globaljson --sdk-version 8.0.406 --roll-forward latestFeature --force
-
-      - name: Install Android Workload
+      - name: Install .NET Android Workload
         run: |
           dotnet workload install android
 
-      - name: Restore NuGet Dependencies
+      - name: Restore Dependencies
         run: |
-          dotnet restore sources/editor/Stride.Editor.Android/Stride.Editor.Android.csproj \
-            --configfile sources/editor/Stride.Editor.Android/nuget.config
+          dotnet restore Stride.sln /p:StridePlatform=Android
 
-      - name: Build & Publish Android APK
+      # Susubukang i-build ang buong Stride solution para sa Android platform
+      - name: Attempt Build for Android Platform
         run: |
-          dotnet publish sources/editor/Stride.Editor.Android/Stride.Editor.Android.csproj \
-            -c Release \
-            -f net8.0-android \
-            -p:AndroidPackageFormat=apk \
-            -p:AndroidEnablePrebuildValidation=false \
-            --configfile sources/editor/Stride.Editor.Android/nuget.config \
-            -o output/
+          dotnet build Stride.sln -c Release /p:StridePlatform=Android /p:AndroidPackageFormat=apk
 
-      - name: Upload APK as Artifact
+      # Kung may mabubuong anumang .apk saanman sa repository, hahanapin at ia-upload ito
+      - name: Find and Upload APK (Kung may nagawa)
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: Stride-Android-Engine-APK
-          path: output/*.apk
-          retention-days: 14
+          name: Stride-Android-Result
+          path: |
+            **/*.apk
+            **/*.aab
+          if-no-files-found: warn
