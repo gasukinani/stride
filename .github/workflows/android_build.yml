@@ -1,0 +1,54 @@
+name: Build Stride Android Engine
+
+on:
+  push:
+    branches: [ "master", "main", "develop" ]
+  pull_request:
+    branches: [ "master", "main", "develop" ]
+  workflow_dispatch: # Pinapayagan kang i-click ang "Run workflow" nang mano-mano
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install Android Workload
+        run: |
+          dotnet workload install android
+
+      - name: Restore NuGet Dependencies
+        run: |
+          dotnet restore sources/editor/Stride.Editor.Android/Stride.Editor.Android.csproj
+
+      - name: Build & Publish Android APK
+        run: |
+          dotnet publish sources/editor/Stride.Editor.Android/Stride.Editor.Android.csproj \
+            -c Release \
+            -f net8.0-android \
+            -p:AndroidPackageFormat=apk \
+            -p:AndroidEnablePrebuildValidation=false \
+            -o output/
+
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Stride-Android-Engine-APK
+          path: output/*.apk
+          retention-days: 14
