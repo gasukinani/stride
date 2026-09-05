@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
-using Stride.Graphics.GeometricPrimitives; // Idinagdag para sa GeometricPrimitive
+using Stride.Graphics.GeometricPrimitives;
 using Stride.Rendering;
 using Stride.Rendering.Colors;
 using Stride.Rendering.Lights;
@@ -67,6 +67,52 @@ public class EditorGame : Game
         entity.Transform.Position = position;
         entity.Transform.Scale = scale;
 
+        var meshDraw = type switch
+        {
+            PrimitiveType.Cube => GeometricPrimitive.Cube.New(GraphicsDevice).ToMeshDraw(),
+            PrimitiveType.Sphere => GeometricPrimitive.Sphere.New(GraphicsDevice).ToMeshDraw(),
+            PrimitiveType.Plane => GeometricPrimitive.Plane.New(GraphicsDevice).ToMeshDraw(),
+            _ => GeometricPrimitive.Cube.New(GraphicsDevice).ToMeshDraw()
+        };
+
+        var model = new Model
+        {
+            new Mesh { Draw = meshDraw }
+        };
+
+        entity.Add(new ModelComponent { Model = model });
+
+        SceneSystem.SceneInstance.RootScene.Entities.Add(entity);
+        _editorEntities.Add(entity);
+
+        NotifyHierarchyChanged();
+        SelectEntity(entity);
+
+        return entity;
+    }
+
+    public void SelectEntity(Entity? entity)
+    {
+        SelectedEntity = entity;
+        if (entity != null)
+        {
+            OnEntitySelected?.Invoke(entity);
+        }
+    }
+
+    public void UpdateEntityPosition(Vector3 newPosition)
+    {
+        if (SelectedEntity != null)
+        {
+            SelectedEntity.Transform.Position = newPosition;
+        }
+    }
+
+    private void NotifyHierarchyChanged()
+    {
+        OnHierarchyChanged?.Invoke(new List<Entity>(_editorEntities));
+    }
+}
         var meshDraw = type switch
         {
             PrimitiveType.Cube => GeometricPrimitive.Cube.New(GraphicsDevice).ToMeshDraw(),
