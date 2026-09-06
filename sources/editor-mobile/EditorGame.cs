@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Stride.Core.Mathematics;
 using Stride.Engine;
@@ -78,7 +79,7 @@ namespace StrideStudio.Mobile
             {
                 Mass = 1.0f,
                 Restitution = 0.5f,
-                IsKinematic = true, // Kinematic habang nasa Edit mode
+                IsKinematic = true,
                 ColliderShapes = { new BoxColliderShapeDesc { Size = Vector3.One } }
             };
             _selectedEntity.Add(rb);
@@ -93,8 +94,18 @@ namespace StrideStudio.Mobile
 
         private void SetupEditorUI()
         {
-            // Gumamit ng fallback Stride built-in font
-            var font = Content.Load<SpriteFont>("StrideDefaultFont") ?? GraphicsDevice.GetDefaultFont();
+            // Safe Font loading para hindi mag-crash kung walang asset file
+            SpriteFont font = null!;
+            try
+            {
+                font = Content.Load<SpriteFont>("StrideDefaultFont");
+            }
+            catch
+            {
+                // Fallback sa GraphicsDevice debug font
+                font = GraphicsDevice.GetDefaultFont();
+            }
+
             _uiManager = new EditorUIManager(font);
 
             _uiManager.OnPlayClicked += StartSimulation;
@@ -110,7 +121,6 @@ namespace StrideStudio.Mobile
 
         private void SetupDefaultGraph()
         {
-            // Halimbawa ng Visual Graph: Tick -> Rotate
             var tick = new UpdateTickNode();
             var rotate = new RotateNode { Speed = 2.5f };
             tick.Outputs.Add(rotate);
@@ -124,7 +134,6 @@ namespace StrideStudio.Mobile
 
             _uiManager.StatusText.Text = "Mode: SIMULATION (PLAYING)";
 
-            // Snapshot bago paganahin ang dynamic physics
             if (_selectedEntity != null)
             {
                 _origPos = _selectedEntity.Transform.Position;
@@ -146,7 +155,6 @@ namespace StrideStudio.Mobile
 
             _uiManager.StatusText.Text = "Mode: EDITING";
 
-            // I-restore ang original position/state
             if (_selectedEntity != null)
             {
                 var rb = _selectedEntity.Get<RigidbodyComponent>();
@@ -187,7 +195,6 @@ namespace StrideStudio.Mobile
 
             HandleViewportGestures();
 
-            // Kapag Play Mode: Patakbuhin ang Visual Node Graphs
             if (IsPlaying && _selectedEntity != null)
             {
                 _graphContext.Target = _selectedEntity;
@@ -202,10 +209,9 @@ namespace StrideStudio.Mobile
 
         private void HandleViewportGestures()
         {
-            // Huwag baguhin ang camera kung bukas ang script editor modal
             if (_uiManager.CodeEditorPanel.Visibility == Visibility.Visible) return;
 
-            // Dalawang Daliri: Pinch Zoom at Pan
+            // Pinch Zoom (2 fingers)
             if (Input.PointerEvents.Count >= 2)
             {
                 var p1 = Input.PointerEvents[0];
@@ -223,7 +229,7 @@ namespace StrideStudio.Mobile
                 return;
             }
 
-            // Isang Daliri: Orbit Camera Drag (Kapag Edit Mode)
+            // Orbit Camera Drag (1 finger)
             if (Input.PointerEvents.Count == 1 && !IsPlaying)
             {
                 var p = Input.PointerEvents[0];
@@ -250,11 +256,9 @@ namespace StrideStudio.Mobile
 
         private void PerformObjectPicking(Vector2 screenPos)
         {
-            // Raycast mula sa Camera Viewport patungo sa Physics World
             var sim = SceneSystem.SceneInstance?.GetProcessor<PhysicsProcessor>()?.Simulation;
             if (sim == null) return;
 
-            // I-convert ang 2D Screen point sa 3D Ray gamit ang Camera
             _camera.Frustum.GetPickRay(screenPos.X, screenPos.Y, out var ray);
             var hit = sim.Raycast(ray.Position, ray.Position + (ray.Direction * 100.0f));
 
