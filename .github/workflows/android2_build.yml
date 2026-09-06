@@ -15,7 +15,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1. I-checkout ang repo kasama ang SUBMODULES at GIT LFS (KRITIKAL: lfs: true)
+      # 1. Checkout kasama ang Submodules at Git LFS
       - name: Checkout Repository with Submodules and LFS
         uses: actions/checkout@v4
         with:
@@ -23,13 +23,13 @@ jobs:
           lfs: true
           fetch-depth: 0
 
-      # 2. Tiyaking na-download ang lahat ng LFS binary dependencies ng Stride
+      # 2. Tiyaking kumpleto ang Git LFS objects
       - name: Pull Git LFS Objects
         run: |
           git lfs install
           git lfs pull
 
-      # 3. Linisin ang corrupted Temp cache mula sa mga naunang failed runs
+      # 3. Linisin ang Stride Temp cache
       - name: Clean Stride Temp Cache
         run: |
           if (Test-Path "$env:LOCALAPPDATA\Temp\stride") {
@@ -50,7 +50,7 @@ jobs:
           dotnet-version: '10.0.x'
           include-prerelease: true
 
-      # 6. I-install ang Android workload para sa .NET 10
+      # 6. Install Android Workload
       - name: Install .NET Android Workload
         run: |
           dotnet workload install android --verbosity normal
@@ -60,10 +60,9 @@ jobs:
         run: |
           dotnet restore ${{ env.PROJECT_PATH }} `
             -p:StridePlatform=Android `
-            -p:StrideGraphicsApi=OpenGLES `
-            -nr:false
+            -p:StrideGraphicsApi=OpenGLES
 
-      # 8. Build & Publish APK
+      # 8. Build & Publish APK (Inalis ang -o flag para maiwasan ang multi-targeting collision)
       - name: Build & Publish APK
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} `
@@ -75,15 +74,15 @@ jobs:
             -p:AndroidCreatePackagePerAbi=false `
             -p:UseSharedCompilation=false `
             -nr:false `
-            -maxcpucount:1 `
-            -o ./output/apk
+            -v normal
 
-      # 9. I-upload ang APK Artifact
+      # 9. Hanapin at i-upload ang APK Artifact
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: StrideStudio-Mobile-APK
           path: |
-            ./output/apk/*.apk
+            sources/editor-mobile/StrideStudio.Mobile/bin/Release/net10.0-android/*-Signed.apk
+            sources/editor-mobile/StrideStudio.Mobile/bin/Release/net10.0-android/*.apk
           retention-days: 7
           if-no-files-found: error
