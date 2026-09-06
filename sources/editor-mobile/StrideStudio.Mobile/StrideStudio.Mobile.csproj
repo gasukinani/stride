@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0-android</TargetFramework>
+    <!-- SOLUSYON SA NETSDK1202: Huwag i-block ang restore/build kahit mas bagong SDK ang gamit -->
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    
     <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
@@ -12,11 +15,16 @@
     <AndroidUseIntermediateDesignerFile>true</AndroidUseIntermediateDesignerFile>
   </PropertyGroup>
 
-  <!-- Reference sa Core Engine mula sa Stride Fork mo -->
+  <!-- Buong Engine Modules mula sa iyong Stride Fork -->
   <ItemGroup>
+    <ProjectReference Include="..\..\engine\Stride.Core\Stride.Core.csproj" />
+    <ProjectReference Include="..\..\engine\Stride.Core.Mathematics\Stride.Core.Mathematics.csproj" />
     <ProjectReference Include="..\..\engine\Stride.Engine\Stride.Engine.csproj" />
     <ProjectReference Include="..\..\engine\Stride.Graphics\Stride.Graphics.csproj" />
     <ProjectReference Include="..\..\engine\Stride.Input\Stride.Input.csproj" />
+    <ProjectReference Include="..\..\engine\Stride.Physics\Stride.Physics.csproj" />
+    <ProjectReference Include="..\..\engine\Stride.Audio\Stride.Audio.csproj" />
+    <ProjectReference Include="..\..\engine\Stride.Particles\Stride.Particles.csproj" />
     <ProjectReference Include="..\..\engine\Stride.UI\Stride.UI.csproj" />
   </ItemGroup>
 </Project>
