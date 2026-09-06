@@ -27,19 +27,15 @@ namespace StrideStudio.Mobile
         private CameraComponent _camera = null!;
         private Entity? _selectedEntity;
 
-        // Viewport Control Values
         private float _cameraDistance = 12.0f;
         private Vector2 _cameraAngles = new(0.4f, 0.6f);
 
-        // Snapshot System para sa Edit/Play Mode Restore
         private Vector3 _origPos;
         private Quaternion _origRot;
 
-        // Visual Scripting Data
         private readonly List<StudioNode> _nodeGraph = new();
         private readonly NodeGraphContext _graphContext = new();
 
-        // UI Manager
         private EditorUIManager _uiManager = null!;
 
         protected override void BeginRun()
@@ -72,7 +68,7 @@ namespace StrideStudio.Mobile
             floor.Add(floorCollider);
             _scene.Entities.Add(floor);
 
-            // 3. Directional Sunlight (Inayos ang Intensity sa LightComponent)
+            // 3. Directional Sunlight
             var sun = new Entity("Sun") { Transform = { Position = new Vector3(10, 20, 10), Rotation = Quaternion.RotationYawPitchRoll(0.5f, -0.8f, 0) } };
             sun.Add(new LightComponent 
             { 
@@ -104,26 +100,33 @@ namespace StrideStudio.Mobile
 
         private void SetupEditorUI()
         {
-            SpriteFont? font = null;
             try
             {
-                font = Content.Load<SpriteFont>("StrideDefaultFont");
+                SpriteFont? font = null;
+                try
+                {
+                    font = Content.Load<SpriteFont>("StrideDefaultFont");
+                }
+                catch
+                {
+                    font = null;
+                }
+
+                _uiManager = new EditorUIManager(font);
+
+                _uiManager.OnPlayClicked += StartSimulation;
+                _uiManager.OnStopClicked += StopSimulation;
+                _uiManager.OnCompileCodeClicked += HandleCodeCompilation;
+
+                var uiEntity = new Entity("EditorUI");
+                var uiComp = new UIComponent { Page = _uiManager.Page, IsFullScreen = true };
+                uiEntity.Add(uiComp);
+                _scene.Entities.Add(uiEntity);
             }
-            catch
+            catch (Exception ex)
             {
-                font = null;
+                Android.Util.Log.Warn("StrideStudio", $"UI initialization fallback: {ex.Message}");
             }
-
-            _uiManager = new EditorUIManager(font);
-
-            _uiManager.OnPlayClicked += StartSimulation;
-            _uiManager.OnStopClicked += StopSimulation;
-            _uiManager.OnCompileCodeClicked += HandleCodeCompilation;
-
-            var uiEntity = new Entity("EditorUI");
-            var uiComp = new UIComponent { Page = _uiManager.Page, IsFullScreen = true };
-            uiEntity.Add(uiComp);
-            _scene.Entities.Add(uiEntity);
         }
 
         private void SetupDefaultGraph()
@@ -139,7 +142,7 @@ namespace StrideStudio.Mobile
             if (IsPlaying) return;
             IsPlaying = true;
 
-            _uiManager.StatusText.Text = "Mode: SIMULATION (PLAYING)";
+            if (_uiManager != null) _uiManager.StatusText.Text = "Mode: SIMULATION (PLAYING)";
 
             if (_selectedEntity != null)
             {
@@ -160,7 +163,7 @@ namespace StrideStudio.Mobile
             if (!IsPlaying) return;
             IsPlaying = false;
 
-            _uiManager.StatusText.Text = "Mode: EDITING";
+            if (_uiManager != null) _uiManager.StatusText.Text = "Mode: EDITING";
 
             if (_selectedEntity != null)
             {
@@ -179,7 +182,7 @@ namespace StrideStudio.Mobile
 
         private void HandleCodeCompilation(string code)
         {
-            if (_selectedEntity == null) return;
+            if (_selectedEntity == null || _uiManager == null) return;
 
             var (success, scriptType, errors) = RuntimeScriptCompiler.CompileCSharpScript(code, "RotatorScript");
             if (success && scriptType != null)
@@ -216,7 +219,7 @@ namespace StrideStudio.Mobile
 
         private void HandleViewportGestures()
         {
-            if (_uiManager.CodeEditorPanel.Visibility == Visibility.Visible) return;
+            if (_uiManager != null && _uiManager.CodeEditorPanel.Visibility == Visibility.Visible) return;
 
             // Pinch Zoom
             if (Input.PointerEvents.Count >= 2)
@@ -264,9 +267,8 @@ namespace StrideStudio.Mobile
         private void PerformObjectPicking(Vector2 screenPos)
         {
             var sim = SceneSystem.SceneInstance?.GetProcessor<PhysicsProcessor>()?.Simulation;
-            if (sim == null) return;
+            if (sim == null || _uiManager == null) return;
 
-            // Stride Camera Raycast Unprojection
             Matrix invViewProj = Matrix.Invert(_camera.ViewProjectionMatrix);
             Vector3 sPos = new Vector3(screenPos.X * 2f - 1f, 1f - screenPos.Y * 2f, 0f);
             var vectorNear = Vector3.Transform(sPos, invViewProj);
