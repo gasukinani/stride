@@ -8,6 +8,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    
+    <!-- Kritikal: Pinapayagan ang unsafe pointer memory reading para sa Roslyn sa Android -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <!-- App Identity -->
     <ApplicationTitle>Stride Mobile Studio</ApplicationTitle>
@@ -15,7 +18,7 @@
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
 
-    <!-- Kinukuha ang manifest sa labas -->
+    <!-- Manifest mula sa labas -->
     <AndroidManifest>..\AndroidManifest.xml</AndroidManifest>
 
     <!-- Android Packaging Settings -->
@@ -35,13 +38,13 @@
     <StrideGraphicsApis>OpenGLES</StrideGraphicsApis>
   </PropertyGroup>
 
-  <!-- ISINASAMA ANG LAHAT NG .CS AT MANIFEST SA LABAS -->
+  <!-- Isinasama ang lahat ng .cs at XML mula sa labas -->
   <ItemGroup>
     <Compile Include="..\*.cs" />
     <None Include="..\AndroidManifest.xml" />
   </ItemGroup>
 
-  <!-- STRIDE CORE ENGINE SUBPROJECTS -->
+  <!-- Stride Core Engine Subprojects -->
   <ItemGroup>
     <ProjectReference Include="..\..\engine\Stride.Engine\Stride.Engine.csproj" />
     <ProjectReference Include="..\..\engine\Stride.Games\Stride.Games.csproj" />
@@ -51,7 +54,7 @@
     <ProjectReference Include="..\..\engine\Stride.Particles\Stride.Particles.csproj" />
   </ItemGroup>
 
-  <!-- RUNTIME ROSLYN COMPILER -->
+  <!-- Roslyn Compiler -->
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.12.0" />
   </ItemGroup>
