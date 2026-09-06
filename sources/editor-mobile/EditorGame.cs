@@ -1,107 +1,183 @@
-using System;
 using System.Collections.Generic;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
+using Stride.Graphics.GeometricPrimitives;
 using Stride.Input;
 using Stride.Physics;
-using Stride.Rendering;
-using Stride.Rendering.Lights;
+using Stride.UI;
+using StrideStudio.Mobile.Nodes;
+using StrideStudio.Mobile.Scripting;
+using StrideStudio.Mobile.UI;
 
 namespace StrideStudio.Mobile
 {
     public class EditorGame : Game
     {
-        public bool IsPlaying { get; set; } = false;
+        public bool IsPlaying { get; private set; }
 
-        private Entity? _cameraEntity;
-        private CameraComponent? _camera;
-        public Entity? SelectedEntity { get; private set; }
-        private RigidbodyComponent? _selectedRb;
+        private Scene _scene = null!;
+        private Entity _cameraEntity = null!;
+        private CameraComponent _camera = null!;
+        private Entity? _selectedEntity;
 
-        private ScriptEditorUI? _editorUI;
-        private readonly List<VisualNode> _graphNodes = new();
+        // Viewport Control Values
+        private float _cameraDistance = 12.0f;
+        private Vector2 _cameraAngles = new(0.4f, 0.6f);
+
+        // Snapshot System para sa Edit/Play Mode Restore
+        private Vector3 _origPos;
+        private Quaternion _origRot;
+
+        // Visual Scripting Data
+        private readonly List<StudioNode> _nodeGraph = new();
+        private readonly NodeGraphContext _graphContext = new();
+
+        // UI Manager
+        private EditorUIManager _uiManager = null!;
 
         protected override void BeginRun()
         {
             base.BeginRun();
 
-            SetupEditorWorld();
+            SetupWorldScene();
             SetupEditorUI();
+            SetupDefaultGraph();
+        }
+
+        private void SetupWorldScene()
+        {
+            _scene = new Scene();
+
+            // 1. Viewport Camera
+            _cameraEntity = new Entity("ViewportCamera");
+            _camera = new CameraComponent { UseViewMatrix = false, VerticalFieldOfView = 55f };
+            _cameraEntity.Add(_camera);
+            UpdateCameraTransform();
+            _scene.Entities.Add(_cameraEntity);
+
+            // 2. Infinite Ground Grid Visual & Physics Floor
+            var floor = new Entity("FloorGrid") { Transform = { Position = new Vector3(0, -0.5f, 0) } };
+            floor.Add(new ModelComponent { Model = GeometricPrimitive.Cube.New(GraphicsDevice, new Vector3(50, 1, 50)).ToModel() });
+            
+            var floorCollider = new StaticColliderComponent();
+            floorCollider.ColliderShapes.Add(new BoxColliderShapeDesc { Size = new Vector3(50, 1, 50) });
+            floor.Add(floorCollider);
+            _scene.Entities.Add(floor);
+
+            // 3. Directional Sunlight
+            var sun = new Entity("Sun") { Transform = { Position = new Vector3(10, 20, 10), Rotation = Quaternion.RotationYawPitchRoll(0.5f, -0.8f, 0) } };
+            sun.Add(new LightComponent { Type = new LightDirectional { Color = Color.White, Intensity = 2.5f } });
+            _scene.Entities.Add(sun);
+
+            // 4. Default Interactive Cube (Target Object)
+            _selectedEntity = new Entity("InteractiveCube") { Transform = { Position = new Vector3(0, 3, 0) } };
+            _selectedEntity.Add(new ModelComponent { Model = GeometricPrimitive.Cube.New(GraphicsDevice, Vector3.One).ToModel() });
+
+            var rb = new RigidbodyComponent
+            {
+                Mass = 1.0f,
+                Restitution = 0.5f,
+                IsKinematic = true, // Kinematic habang nasa Edit mode
+                ColliderShapes = { new BoxColliderShapeDesc { Size = Vector3.One } }
+            };
+            _selectedEntity.Add(rb);
+            _scene.Entities.Add(_selectedEntity);
+
+            // I-save ang initial snapshot
+            _origPos = _selectedEntity.Transform.Position;
+            _origRot = _selectedEntity.Transform.Rotation;
+
+            SceneSystem.SceneInstance = new SceneInstance(Services, _scene);
         }
 
         private void SetupEditorUI()
         {
-            _editorUI = new ScriptEditorUI(this);
+            // Gumamit ng fallback Stride built-in font
+            var font = Content.Load<SpriteFont>("StrideDefaultFont") ?? GraphicsDevice.GetDefaultFont();
+            _uiManager = new EditorUIManager(font);
 
-            var uiEntity = new Entity("ScriptingUIOverlay")
-            {
-                _editorUI.UIComponent
-            };
-            SceneSystem.SceneInstance.RootScene.Entities.Add(uiEntity);
+            _uiManager.OnPlayClicked += StartSimulation;
+            _uiManager.OnStopClicked += StopSimulation;
+            _uiManager.OnCompileCodeClicked += HandleCodeCompilation;
+
+            // UI Entity sa Scene
+            var uiEntity = new Entity("EditorUI");
+            var uiComp = new UIComponent { Page = _uiManager.Page, IsFullScreen = true };
+            uiEntity.Add(uiComp);
+            _scene.Entities.Add(uiEntity);
         }
 
-        private void SetupEditorWorld()
+        private void SetupDefaultGraph()
         {
-            var scene = new Scene();
-
-            // Camera
-            _cameraEntity = new Entity("EditorCamera")
-            {
-                Transform = { Position = new Vector3(0, 4, 8), Rotation = Quaternion.RotationX(-0.35f) }
-            };
-            _camera = new CameraComponent { UseViewMatrix = false };
-            _cameraEntity.Add(_camera);
-            scene.Entities.Add(_cameraEntity);
-
-            // Light
-            var lightEntity = new Entity("MainLight")
-            {
-                Transform = { Position = new Vector3(3, 10, 5), Rotation = Quaternion.RotationYawPitchRoll(0.5f, -0.7f, 0) }
-            };
-            lightEntity.Add(new LightComponent { Type = new LightDirectional() });
-            scene.Entities.Add(lightEntity);
-
-            // Static Ground
-            var groundEntity = new Entity("GroundPlane")
-            {
-                Transform = { Position = new Vector3(0, -0.5f, 0) }
-            };
-            groundEntity.Add(new ModelComponent
-            {
-                Model = GeometricPrimitive.Cube.New(GraphicsDevice, new Vector3(14, 0.2f, 14)).ToModel()
-            });
-            var groundCollider = new StaticColliderComponent();
-            groundCollider.ColliderShapes.Add(new BoxColliderShapeDesc { Size = new Vector3(14, 0.2f, 14), IsStatic = true });
-            groundEntity.Add(groundCollider);
-            scene.Entities.Add(groundEntity);
-
-            // Target Interactive Object
-            SelectedEntity = new Entity("InteractiveCube")
-            {
-                Transform = { Position = new Vector3(0, 2.5f, 0) }
-            };
-            SelectedEntity.Add(new ModelComponent
-            {
-                Model = GeometricPrimitive.Cube.New(GraphicsDevice, Vector3.One).ToModel()
-            });
-
-            _selectedRb = new RigidbodyComponent
-            {
-                Mass = 1.0f,
-                Restitution = 0.5f,
-                Friction = 0.5f
-            };
-            _selectedRb.ColliderShapes.Add(new BoxColliderShapeDesc { Size = Vector3.One });
-            SelectedEntity.Add(_selectedRb);
-            scene.Entities.Add(SelectedEntity);
-
-            SceneSystem.SceneInstance = new SceneInstance(Services, scene);
+            // Halimbawa ng Visual Graph: Tick -> Rotate
+            var tick = new UpdateTickNode();
+            var rotate = new RotateNode { Speed = 2.5f };
+            tick.Outputs.Add(rotate);
+            _nodeGraph.Add(tick);
         }
 
-        public void AddDynamicNode(VisualNode node)
+        public void StartSimulation()
         {
-            _graphNodes.Add(node);
+            if (IsPlaying) return;
+            IsPlaying = true;
+
+            _uiManager.StatusText.Text = "Mode: SIMULATION (PLAYING)";
+
+            // Snapshot bago paganahin ang dynamic physics
+            if (_selectedEntity != null)
+            {
+                _origPos = _selectedEntity.Transform.Position;
+                _origRot = _selectedEntity.Transform.Rotation;
+
+                var rb = _selectedEntity.Get<RigidbodyComponent>();
+                if (rb != null)
+                {
+                    rb.IsKinematic = false;
+                    rb.Activate();
+                }
+            }
+        }
+
+        public void StopSimulation()
+        {
+            if (!IsPlaying) return;
+            IsPlaying = false;
+
+            _uiManager.StatusText.Text = "Mode: EDITING";
+
+            // I-restore ang original position/state
+            if (_selectedEntity != null)
+            {
+                var rb = _selectedEntity.Get<RigidbodyComponent>();
+                if (rb != null)
+                {
+                    rb.LinearVelocity = Vector3.Zero;
+                    rb.AngularVelocity = Vector3.Zero;
+                    rb.IsKinematic = true;
+                }
+
+                _selectedEntity.Transform.Position = _origPos;
+                _selectedEntity.Transform.Rotation = _origRot;
+            }
+        }
+
+        private void HandleCodeCompilation(string code)
+        {
+            if (_selectedEntity == null) return;
+
+            var (success, scriptType, errors) = RuntimeScriptCompiler.CompileCSharpScript(code, "RotatorScript");
+            if (success && scriptType != null)
+            {
+                var scriptInstance = (ScriptComponent)Activator.CreateInstance(scriptType)!;
+                _selectedEntity.Add(scriptInstance);
+                _uiManager.StatusText.Text = "Build Success: Script Attached!";
+                _uiManager.CodeEditorPanel.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                _uiManager.StatusText.Text = $"Build Error:\n{errors}";
+            }
         }
 
         protected override void Update(GameTime gameTime)
@@ -109,30 +185,83 @@ namespace StrideStudio.Mobile
             base.Update(gameTime);
             float dt = (float)gameTime.Elapsed.TotalSeconds;
 
-            // Touch Camera Navigation sa Edit Mode
-            if (!IsPlaying && Input.PointerEvents.Count > 0)
+            HandleViewportGestures();
+
+            // Kapag Play Mode: Patakbuhin ang Visual Node Graphs
+            if (IsPlaying && _selectedEntity != null)
             {
-                foreach (var pointer in Input.PointerEvents)
+                _graphContext.Target = _selectedEntity;
+                _graphContext.DeltaTime = dt;
+
+                foreach (var rootNode in _nodeGraph)
                 {
-                    // Tiyakin na hindi nasa ibabaw ng top bar bago mag-orbit
-                    if (pointer.EventType == PointerEventType.Moved && pointer.Position.Y > 0.15f && _cameraEntity != null)
-                    {
-                        _cameraEntity.Transform.Rotation *= Quaternion.RotationYawPitchRoll(
-                            -pointer.DeltaPosition.X * 3.0f,
-                            -pointer.DeltaPosition.Y * 3.0f,
-                            0);
-                    }
+                    rootNode.Execute(_graphContext);
                 }
             }
+        }
 
-            // Pagpapatakbo ng mga Visual Node scripts kapag naka-Play
-            if (IsPlaying && SelectedEntity != null)
+        private void HandleViewportGestures()
+        {
+            // Huwag baguhin ang camera kung bukas ang script editor modal
+            if (_uiManager.CodeEditorPanel.Visibility == Visibility.Visible) return;
+
+            // Dalawang Daliri: Pinch Zoom at Pan
+            if (Input.PointerEvents.Count >= 2)
             {
-                var context = new NodeExecutionContext(SceneSystem.SceneInstance.RootScene, SelectedEntity, Input, dt);
-                foreach (var node in _graphNodes)
+                var p1 = Input.PointerEvents[0];
+                var p2 = Input.PointerEvents[1];
+
+                if (p1.EventType == PointerEventType.Moved && p2.EventType == PointerEventType.Moved)
                 {
-                    node.Execute(context);
+                    float prevDist = Vector2.Distance(p1.AbsolutePosition - p1.DeltaPosition, p2.AbsolutePosition - p2.DeltaPosition);
+                    float currentDist = Vector2.Distance(p1.AbsolutePosition, p2.AbsolutePosition);
+                    float deltaDist = currentDist - prevDist;
+
+                    _cameraDistance = MathUtil.Clamp(_cameraDistance - (deltaDist * 15.0f), 2.0f, 40.0f);
+                    UpdateCameraTransform();
                 }
+                return;
+            }
+
+            // Isang Daliri: Orbit Camera Drag (Kapag Edit Mode)
+            if (Input.PointerEvents.Count == 1 && !IsPlaying)
+            {
+                var p = Input.PointerEvents[0];
+                if (p.EventType == PointerEventType.Moved)
+                {
+                    _cameraAngles.X += -p.DeltaPosition.X * 4.0f;
+                    _cameraAngles.Y = MathUtil.Clamp(_cameraAngles.Y + (-p.DeltaPosition.Y * 4.0f), -1.4f, 1.4f);
+                    UpdateCameraTransform();
+                }
+                else if (p.EventType == PointerEventType.Pressed)
+                {
+                    PerformObjectPicking(p.AbsolutePosition);
+                }
+            }
+        }
+
+        private void UpdateCameraTransform()
+        {
+            var rotation = Quaternion.RotationYawPitchRoll(_cameraAngles.X, _cameraAngles.Y, 0);
+            var offset = Vector3.Transform(new Vector3(0, 0, _cameraDistance), rotation);
+            _cameraEntity.Transform.Position = offset;
+            _cameraEntity.Transform.Rotation = rotation;
+        }
+
+        private void PerformObjectPicking(Vector2 screenPos)
+        {
+            // Raycast mula sa Camera Viewport patungo sa Physics World
+            var sim = SceneSystem.SceneInstance?.GetProcessor<PhysicsProcessor>()?.Simulation;
+            if (sim == null) return;
+
+            // I-convert ang 2D Screen point sa 3D Ray gamit ang Camera
+            _camera.Frustum.GetPickRay(screenPos.X, screenPos.Y, out var ray);
+            var hit = sim.Raycast(ray.Position, ray.Position + (ray.Direction * 100.0f));
+
+            if (hit.Succeeded && hit.Collider.Entity != null && hit.Collider.Entity.Name != "FloorGrid")
+            {
+                _selectedEntity = hit.Collider.Entity;
+                _uiManager.StatusText.Text = $"Selected: {_selectedEntity.Name}";
             }
         }
     }
