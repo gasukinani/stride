@@ -15,10 +15,10 @@ namespace StrideStudio.Mobile.UI
         public UIPage Page { get; private set; }
         public Grid RootGrid { get; private set; }
 
-        // UI Panels
-        public ContentDecorator CodeEditorPanel { get; private set; }
-        public EditText CodeInputBox { get; private set; }
-        public TextBlock StatusText { get; private set; }
+        // UI Panels - Ginawang StackPanel para 100% compatible sa Stride.UI
+        public StackPanel CodeEditorPanel { get; private set; } = null!;
+        public EditText CodeInputBox { get; private set; } = null!;
+        public TextBlock StatusText { get; private set; } = null!;
 
         public event Action? OnPlayClicked;
         public event Action? OnStopClicked;
@@ -66,14 +66,15 @@ namespace StrideStudio.Mobile.UI
 
         private void BuildCodeEditorModal(SpriteFont font)
         {
-            var modal = new StackPanel
+            CodeEditorPanel = new StackPanel
             {
                 Orientation = Orientation.Vertical,
                 Width = 600,
                 Height = 450,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                BackgroundColor = new Color(30, 30, 35, 230)
+                BackgroundColor = new Color(30, 30, 35, 230),
+                Visibility = Visibility.Collapsed
             };
 
             var title = new TextBlock
@@ -83,7 +84,7 @@ namespace StrideStudio.Mobile.UI
                 TextColor = Color.White,
                 Margin = new Thickness(10)
             };
-            modal.Children.Add(title);
+            CodeEditorPanel.Children.Add(title);
 
             // Text box para sa code
             CodeInputBox = new EditText
@@ -105,17 +106,12 @@ public class RotatorScript : SyncScript
                 Margin = new Thickness(10),
                 BackgroundColor = new Color(15, 15, 20, 255)
             };
-            modal.Children.Add(CodeInputBox);
+            CodeEditorPanel.Children.Add(CodeInputBox);
 
             var compileBtn = CreateButton("Build & Attach to Entity", Color.OrangeRed, font);
             compileBtn.Click += (s, e) => OnCompileCodeClicked?.Invoke(CodeInputBox.Text);
-            modal.Children.Add(compileBtn);
+            CodeEditorPanel.Children.Add(compileBtn);
 
-            CodeEditorPanel = new ContentDecorator
-            {
-                Content = modal,
-                Visibility = Visibility.Collapsed
-            };
             RootGrid.Children.Add(CodeEditorPanel);
         }
 
