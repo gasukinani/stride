@@ -3,8 +3,10 @@ using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
 using Stride.UI;
-using Stride.UI.Controls;
 using Stride.UI.Panels;
+using Button = Stride.UI.Controls.Button;
+using EditText = Stride.UI.Controls.EditText;
+using TextBlock = Stride.UI.Controls.TextBlock;
 
 namespace StrideStudio.Mobile.UI
 {
