@@ -1,61 +1,76 @@
-name: Build Stride Mobile Studio APK
+name: Build Stride Mobile Studio (Android APK)
 
 on:
-  workflow_dispatch:
   push:
-    paths:
-      - 'sources/editor-mobile/**'
-      - '.github/workflows/build-mobile-studio.yml'
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Pinapayagan kang i-click ang "Run workflow" mano-mano sa GitHub
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'sources/editor-mobile/StrideStudio.Mobile/StrideStudio.Mobile.csproj'
 
 jobs:
-  build-apk:
-    name: Compile Android Studio APK
+  build-android:
     runs-on: windows-latest
-    timeout-minutes: 45
 
     steps:
-      - name: Checkout Fork Repository
+      # 1. I-checkout ang buong repository kasama ang submodules (kung meron ang Stride fork mo)
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          lfs: true
-          submodules: true
+          submodules: recursive
+          fetch-depth: 0
 
-      - name: Setup .NET SDK 8.0
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Setup Java JDK 17
+      # 2. I-setup ang JDK (Kailangan ng Android SDK at Gradle build tools)
+      - name: Set up Java Development Kit (JDK 17)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      # 3. I-setup ang .NET SDK
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      # 4. I-install ang Android Workload para sa .NET
       - name: Install .NET Android Workload
         run: |
-          dotnet workload install android
+          dotnet workload install android --verbosity normal
 
-      - name: Restore Mobile Studio Project
+      # 5. Dotnet Restore (Naka-bypass ang NETSDK1202 EOL check)
+      - name: Restore Dependencies
         run: |
-          dotnet restore sources/editor-mobile/StrideStudio.Mobile/StrideStudio.Mobile.csproj -p:StridePlatform=Android
+          dotnet restore ${{ env.PROJECT_PATH }} `
+            -p:StridePlatform=Android `
+            -p:CheckEolWorkloads=false `
+            -p:CheckEolTargetFramework=false `
+            --verbosity normal
 
-      # Iko-compile at gagawan ito ng APK package
-      - name: Build & Package APK
+      # 6. I-build at i-publish ang Android APK
+      # Gumagamit ng -p:AndroidKeyStore=false para mag-generate ng debug-signed APK na pwedeng i-test agad sa phone
+      - name: Build & Publish APK (Release Mode)
         run: |
-          dotnet publish sources/editor-mobile/StrideStudio.Mobile/StrideStudio.Mobile.csproj `
+          dotnet publish ${{ env.PROJECT_PATH }} `
             -c Release `
             -f net8.0-android `
-            -p:AndroidPackageFormat=apk `
             -p:StridePlatform=Android `
-            -o ./publish-output
+            -p:CheckEolWorkloads=false `
+            -p:CheckEolTargetFramework=false `
+            -p:AndroidPackageFormat=apk `
+            -p:AndroidCreatePackagePerAbi=false `
+            --no-restore `
+            -o ./output/apk
 
-      # Ia-upload ang tapos na APK file para ma-download mo agad
-      - name: Upload Finished APK
+      # 7. I-upload ang nabuong APK sa GitHub Actions Artifacts para ma-download
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: StrideStudio-Mobile-App
-          path: ./publish-output/*.apk
-          retention-days: 14
+          name: StrideStudio-Mobile-APK
+          path: |
+            ./output/apk/*.apk
+          retention-days: 7
+          if-no-files-found: error
