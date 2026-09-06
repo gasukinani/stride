@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Target Framework & OS Platform para sa Android -->
-    <TargetFramework>net8.0-android</TargetFramework>
+    <!-- ITUGMA SA STRIDE ENGINE: net10.0-android imbes na net8.0 -->
+    <TargetFramework>net10.0-android</TargetFramework>
     <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 
-    <!-- App Metadata & Android Packaging -->
+    <!-- App Configuration -->
     <ApplicationTitle>Stride Mobile Studio</ApplicationTitle>
     <ApplicationId>com.gasukinani.stridestudio</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
@@ -16,54 +16,32 @@
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidUseIntermediateDesignerFile>True</AndroidUseIntermediateDesignerFile>
 
-    <!-- 1. I-off ang CPM para sa external NuGet package (Roslyn) -->
-    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
-
-    <!-- 2. I-bypass ang NETSDK1202 Workload EOL Check -->
-    <CheckEolWorkloads>false</CheckEolWorkloads>
-    <CheckEolTargetFramework>false</CheckEolTargetFramework>
-
-    <!-- Stride Platform Specification -->
+    <!-- Stride Engine Environment -->
     <StridePlatform>Android</StridePlatform>
     <StrideGraphicsApi Condition="'$(StrideGraphicsApi)' == ''">OpenGLES</StrideGraphicsApi>
-
-    <!-- Android Build Optimization -->
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
-    <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">false</RunAOTCompilation>
   </PropertyGroup>
 
   <!-- ======================================================== -->
-  <!-- DIREKTONG STRIDE ENGINE SOURCE CODE (PROJECT REFERENCES)  -->
-  <!-- Mula: sources/editor-mobile/StrideStudio.Mobile/         -->
-  <!-- Patungo: sources/engine/...                             -->
+  <!-- STRIDE CORE ENGINE SUBPROJECTS (PROJECT REFERENCES)      -->
   <!-- ======================================================== -->
   <ItemGroup>
-    <!-- Stride Engine Core (kasama na rito ang Graphics, Input, Audio, SceneSystem) -->
     <ProjectReference Include="..\..\engine\Stride.Engine\Stride.Engine.csproj" />
-
-    <!-- Stride 3D Bullet Physics Engine -->
     <ProjectReference Include="..\..\engine\Stride.Physics\Stride.Physics.csproj" />
-
-    <!-- Stride UI Framework (Panels, Buttons, TextBlock, Canvas) -->
     <ProjectReference Include="..\..\engine\Stride.UI\Stride.UI.csproj" />
-
-    <!-- Optional Features para sa Studio -->
     <ProjectReference Include="..\..\engine\Stride.Navigation\Stride.Navigation.csproj" />
     <ProjectReference Include="..\..\engine\Stride.Particles\Stride.Particles.csproj" />
   </ItemGroup>
 
   <!-- ======================================================== -->
-  <!-- EXTERNAL COMPILER PACKAGE (Para sa Runtime C# Scripts)    -->
+  <!-- RUNTIME C# SCRIPTING COMPILER (GUMAGAMIT NG VersionOverride PARA SA CPM) -->
   <!-- ======================================================== -->
   <ItemGroup>
-    <!-- Roslyn C# Compiler para sa in-app code editor -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+    <!-- VersionOverride ang tamang paraan sa CPM para hindi masira ang ibang projects -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.8.0" />
   </ItemGroup>
 
-  <!-- ======================================================== -->
-  <!-- ANDROID ASSETS & MANIFEST                                -->
-  <!-- ======================================================== -->
   <ItemGroup>
     <None Include="Properties\AndroidManifest.xml" Condition="Exists('Properties\AndroidManifest.xml')" />
   </ItemGroup>
