@@ -1,0 +1,61 @@
+name: Build Stride Mobile Studio APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'sources/editor-mobile/**'
+      - '.github/workflows/build-mobile-studio.yml'
+
+jobs:
+  build-apk:
+    name: Compile Android Studio APK
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Fork Repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          submodules: true
+
+      - name: Setup .NET SDK 8.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install .NET Android Workload
+        run: |
+          dotnet workload install android
+
+      - name: Restore Mobile Studio Project
+        run: |
+          dotnet restore sources/editor-mobile/StrideStudio.Mobile/StrideStudio.Mobile.csproj -p:StridePlatform=Android
+
+      # Iko-compile at gagawan ito ng APK package
+      - name: Build & Package APK
+        run: |
+          dotnet publish sources/editor-mobile/StrideStudio.Mobile/StrideStudio.Mobile.csproj `
+            -c Release `
+            -f net8.0-android `
+            -p:AndroidPackageFormat=apk `
+            -p:StridePlatform=Android `
+            -o ./publish-output
+
+      # Ia-upload ang tapos na APK file para ma-download mo agad
+      - name: Upload Finished APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StrideStudio-Mobile-App
+          path: ./publish-output/*.apk
+          retention-days: 14
