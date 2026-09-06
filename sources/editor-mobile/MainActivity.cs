@@ -7,12 +7,14 @@ using Stride.Starter;
 namespace StrideStudio.Mobile
 {
     [Activity(
+        Name = "com.gasukinani.stridestudio.MainActivity",
         Label = "Stride Mobile Studio",
         MainLauncher = true,
+        Exported = true,
         Icon = "@android:drawable/sym_def_app_icon",
         Theme = "@android:style/Theme.NoTitleBar.Fullscreen",
         ScreenOrientation = ScreenOrientation.Landscape,
-        ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.KeyboardHidden)]
+        ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.KeyboardHidden | ConfigChanges.ScreenLayout)]
     public class MainActivity : AndroidGameActivity
     {
         private EditorGame? _game;
@@ -21,7 +23,7 @@ namespace StrideStudio.Mobile
         {
             base.OnCreate(savedInstanceState);
 
-            // Inilulunsad ang Stride Engine gamit ang Game Context ng Android
+            // Inilulunsad ang Stride Engine
             _game = new EditorGame();
             _game.Run(GameContext);
         }
