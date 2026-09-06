@@ -1,29 +1,31 @@
-name: Test Android Build
+name: Build Stride Mobile Studio APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ master, main ]
+    paths:
+      - 'sources/editor-mobile/**'
+      - '.github/workflows/build-mobile-studio.yml'
 
 jobs:
-  build-android:
+  build-apk:
+    name: Compile Android Studio APK
     runs-on: windows-latest
+    timeout-minutes: 45
 
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Fork Repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           lfs: true
+          submodules: true
 
-      - name: Setup .NET SDK
+      - name: Setup .NET SDK 8.0
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: '8.0.x'
 
-      - name: Setup Java JDK
+      - name: Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -36,24 +38,24 @@ jobs:
         run: |
           dotnet workload install android
 
-      # Dito nakalagay ang solusyon: build/Stride.Android.sln
-      - name: Restore Dependencies
+      - name: Restore Mobile Studio Project
         run: |
-          dotnet restore build/Stride.Android.slnf /p:StridePlatform=Android
+          dotnet restore sources/editor-mobile/StrideStudio.Mobile/StrideStudio.Mobile.csproj -p:StridePlatform=Android
 
-      # Build Stride Android solution
-      - name: Attempt Build for Android Platform
+      # Iko-compile at gagawan ito ng APK package
+      - name: Build & Package APK
         run: |
-          dotnet build build/Stride.Android.slnf -c Release /p:StridePlatform=Android
+          dotnet publish sources/editor-mobile/StrideStudio.Mobile/StrideStudio.Mobile.csproj `
+            -c Release `
+            -f net8.0-android `
+            -p:AndroidPackageFormat=apk `
+            -p:StridePlatform=Android `
+            -o ./publish-output
 
-      # Maghahanap kung may nalikhang .apk o Android binaries
-      - name: Find and Upload Artifacts
+      # Ia-upload ang tapos na APK file para ma-download mo agad
+      - name: Upload Finished APK
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: Stride-Android-Build-Output
-          path: |
-            **/*.apk
-            **/*.aab
-            build/**/bin/Release/**/*.dll
-          if-no-files-found: warn
+          name: StrideStudio-Mobile-App
+          path: ./publish-output/*.apk
+          retention-days: 14
