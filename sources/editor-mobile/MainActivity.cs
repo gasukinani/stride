@@ -4,6 +4,7 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Views;
 using Stride.Engine;
+using Stride.Games;
 using Stride.Starter;
 
 namespace StrideStudio.Mobile
@@ -20,7 +21,7 @@ namespace StrideStudio.Mobile
     [IntentFilter(
         new[] { Intent.ActionMain },
         Categories = new[] { Intent.CategoryLauncher, Intent.CategoryDefault })]
-    public class MainActivity : AndroidGameActivity
+    public class MainActivity : StrideActivity
     {
         private EditorGame? _game;
 
@@ -28,10 +29,8 @@ namespace StrideStudio.Mobile
         {
             base.OnCreate(savedInstanceState);
 
-            // Tiyaking Fullscreen at nakatago ang System Navigation Bar para sa Game Engine UI
             HideSystemUI();
 
-            // Simulan ang Stride Game Context
             _game = new EditorGame();
             _game.Run(GameContext);
         }
@@ -49,7 +48,6 @@ namespace StrideStudio.Mobile
         {
             if (Window == null) return;
 
-            // Immersive Sticky Fullscreen mode para sa Android tablets at phones
             if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
             {
                 Window.SetDecorFitsSystemWindows(false);
@@ -62,7 +60,7 @@ namespace StrideStudio.Mobile
             }
             else
             {
-#pragma warning disable CS0618 // Type or member is obsolete
+#pragma warning disable CS0618
                 var uiOptions = (int)Window.DecorView.SystemUiVisibility;
                 uiOptions |= (int)SystemUiFlags.LowProfile;
                 uiOptions |= (int)SystemUiFlags.Fullscreen;
