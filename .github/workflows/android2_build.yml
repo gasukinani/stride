@@ -17,7 +17,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1. Checkout kasama ang Submodules at Git LFS
+      # 1. Checkout repository with Submodules and LFS
       - name: Checkout Repository with Submodules and LFS
         uses: actions/checkout@v4
         with:
@@ -25,14 +25,14 @@ jobs:
           lfs: true
           fetch-depth: 0
 
-      # 2. Tiyaking kumpleto ang pag-pull ng LFS binaries
+      # 2. Pull Git LFS Objects
       - name: Pull Git LFS Objects
         shell: pwsh
         run: |
           git lfs install
           git lfs pull
 
-      # 3. Linisin ang lumang Stride Temp Cache
+      # 3. Clean Temp Cache
       - name: Clean Stride Temp Cache
         shell: pwsh
         run: |
@@ -54,31 +54,25 @@ jobs:
           dotnet-version: '10.0.x'
           include-prerelease: true
 
-      # 6. Install .NET Android Workload
+      # 6. Install Android Workload
       - name: Install .NET Android Workload
         shell: pwsh
         run: |
           dotnet workload install android --verbosity normal
 
-      # 7. Restore Dependencies
+      # 7. Restore Project Dependencies
       - name: Restore Project Dependencies
         shell: pwsh
         run: |
-          dotnet restore $env:PROJECT_PATH -p:StridePlatform=Android -p:StrideGraphicsApi=OpenGLES
+          dotnet restore $env:PROJECT_PATH
 
-      # 8. Pre-build Core Host Assemblies (Iwas CS2012 Roslyn file-lock sa Windows)
-      - name: Pre-build Host Core Assemblies
-        shell: pwsh
-        run: |
-          dotnet build sources/core/Stride.Core.Serialization/Stride.Core.Serialization.csproj -c Release -f net10.0 -p:UseSharedCompilation=false -p:BuildInParallel=false
-
-      # 9. Build at Publish APK
+      # 8. Build at Publish APK
       - name: Build and Publish Android APK
         shell: pwsh
         run: |
-          dotnet publish $env:PROJECT_PATH -c Release -f net10.0-android -p:StridePlatform=Android -p:StrideGraphicsApi=OpenGLES -p:AndroidPackageFormat=apk -p:AndroidCreatePackagePerAbi=false -p:UseSharedCompilation=false -p:BuildInParallel=false -maxcpucount:1 -nr:false -v normal
+          dotnet publish $env:PROJECT_PATH -c Release -f net10.0-android -p:AndroidPackageFormat=apk -p:AndroidCreatePackagePerAbi=false -p:UseSharedCompilation=false -p:BuildInParallel=false -maxcpucount:1 -nr:false -v normal
 
-      # 10. Upload APK Artifact
+      # 9. Upload APK Artifact
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
