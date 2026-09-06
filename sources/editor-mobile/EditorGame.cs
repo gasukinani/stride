@@ -1,4 +1,4 @@
-            using System;
+using System;
 using System.Collections.Generic;
 using Stride.Core.Mathematics;
 using Stride.Engine;
@@ -72,9 +72,13 @@ namespace StrideStudio.Mobile
             floor.Add(floorCollider);
             _scene.Entities.Add(floor);
 
-            // 3. Directional Sunlight
+            // 3. Directional Sunlight (Inayos ang Intensity sa LightComponent)
             var sun = new Entity("Sun") { Transform = { Position = new Vector3(10, 20, 10), Rotation = Quaternion.RotationYawPitchRoll(0.5f, -0.8f, 0) } };
-            sun.Add(new LightComponent { Type = new LightDirectional { Color = new ColorRgbProvider(new Color(1f, 1f, 1f)), Intensity = 2.5f } });
+            sun.Add(new LightComponent 
+            { 
+                Type = new LightDirectional { Color = new ColorRgbProvider(new Color(1f, 1f, 1f)) }, 
+                Intensity = 2.5f 
+            });
             _scene.Entities.Add(sun);
 
             // 4. Default Interactive Cube (Target Object)
