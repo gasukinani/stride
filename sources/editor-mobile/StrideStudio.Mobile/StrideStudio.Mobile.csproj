@@ -4,19 +4,19 @@
     <TargetFramework>net10.0-android</TargetFramework>
     <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
-    
-    <!-- Kritikal: Tinitiyak na bubuo ito ng buong Android Application Package -->
     <AndroidApplication>True</AndroidApplication>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
 
-    <!-- App Identity & Manifest Link -->
+    <!-- App Identity -->
     <ApplicationTitle>Stride Mobile Studio</ApplicationTitle>
     <ApplicationId>com.gasukinani.stridestudio</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-    <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
+
+    <!-- KINUKUHA ANG ANDROID MANIFEST MULA SA LABAS (sources/editor-mobile/AndroidManifest.xml) -->
+    <AndroidManifest>..\AndroidManifest.xml</AndroidManifest>
 
     <!-- Android Packaging Settings -->
     <AndroidPackageFormat>apk</AndroidPackageFormat>
@@ -24,7 +24,7 @@
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
 
-    <!-- Runtime Roslyn Scripting Protection (Bawal i-strip ang compiler APIs sa release) -->
+    <!-- Runtime Roslyn Scripting Protection -->
     <PublishTrimmed>false</PublishTrimmed>
     <RunAOTCompilation>false</RunAOTCompilation>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
@@ -34,6 +34,15 @@
     <StrideGraphicsApi>OpenGLES</StrideGraphicsApi>
     <StrideGraphicsApis>OpenGLES</StrideGraphicsApis>
   </PropertyGroup>
+
+  <!-- ======================================================== -->
+  <!-- ISINASAMA LAHAT NG .CS AT XML FILES MULA SA LABAS NG FOLDER -->
+  <!-- (MainActivity, EditorGame, Nodes, Scripting, UI)         -->
+  <!-- ======================================================== -->
+  <ItemGroup>
+    <Compile Include="..\*.cs" />
+    <None Include="..\AndroidManifest.xml" />
+  </ItemGroup>
 
   <!-- ======================================================== -->
   <!-- STRIDE CORE ENGINE SUBPROJECTS                           -->
@@ -51,13 +60,6 @@
   <!-- ======================================================== -->
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.12.0" />
-  </ItemGroup>
-
-  <!-- ======================================================== -->
-  <!-- ANDROID MANIFEST FILE LINK                               -->
-  <!-- ======================================================== -->
-  <ItemGroup Condition="Exists('Properties\AndroidManifest.xml')">
-    <None Include="Properties\AndroidManifest.xml" />
   </ItemGroup>
 
 </Project>
