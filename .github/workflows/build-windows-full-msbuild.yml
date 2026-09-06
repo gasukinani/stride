@@ -54,9 +54,9 @@ jobs:
       # VsDevCmd environment para sa native toolchain
       - uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Restore
+      - name: Restore Android Solution Filter
         run: |
-          msbuild build\Stride.slnx `
+          msbuild build\Stride.Android.slnf `
             /t:Restore `
             /m /nr:false /v:m /p:WarningLevel=0 `
             /p:Configuration=${{ github.event.inputs.build-type || 'Release' }} `
@@ -66,10 +66,11 @@ jobs:
             /p:StrideSkipUnitTests=true `
             /p:StrideSkipAutoPack=true
 
-      - name: Build
+      - name: Build and Package Android
         run: |
-          msbuild build\Stride.slnx `
+          msbuild build\Stride.Android.slnf `
             /m /nr:false /v:m /p:WarningLevel=0 `
+            /t:Build;PackageForAndroid `
             /p:Configuration=${{ github.event.inputs.build-type || 'Release' }} `
             /p:Platform="Any CPU" `
             /p:StridePlatforms=Android `
@@ -78,13 +79,15 @@ jobs:
             /p:StrideSkipAutoPack=true `
             /p:AndroidPackageFormat=apk
 
-      # Kukunin ang anumang .apk o nabuong Android packages
-      - name: Upload Android Artifacts
+      # Hahanapin ang APK, AAB, o anumang Android binaries na nagawa
+      - name: Upload Android Output
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Stride-Android-Output
+          name: Stride-Android-Package
           path: |
             **/*.apk
             **/*.aab
+            bin/**/Release/**/*-Signed.apk
+            bin/**/*.dll
           if-no-files-found: warn
