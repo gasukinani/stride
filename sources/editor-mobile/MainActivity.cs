@@ -4,8 +4,6 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Views;
 using Stride.Engine;
-using Stride.Games;
-using Stride.Starter;
 
 namespace StrideStudio.Mobile
 {
@@ -21,7 +19,7 @@ namespace StrideStudio.Mobile
     [IntentFilter(
         new[] { Intent.ActionMain },
         Categories = new[] { Intent.CategoryLauncher, Intent.CategoryDefault })]
-    public class MainActivity : StrideActivity
+    public class MainActivity : Activity
     {
         private EditorGame? _game;
 
@@ -31,8 +29,9 @@ namespace StrideStudio.Mobile
 
             HideSystemUI();
 
+            // Simulan ang Stride Game Engine
             _game = new EditorGame();
-            _game.Run(GameContext);
+            _game.Run();
         }
 
         public override void OnWindowFocusChanged(bool hasFocus)
