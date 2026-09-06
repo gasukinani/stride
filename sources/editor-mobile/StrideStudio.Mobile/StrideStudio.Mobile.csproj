@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Target Framework & OS Version -->
     <TargetFramework>net10.0-android</TargetFramework>
     <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
@@ -14,21 +13,19 @@
     <ApplicationId>com.gasukinani.stridestudio</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-    <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
-    
+
     <!-- Android Packaging Settings -->
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidUseIntermediateDesignerFile>True</AndroidUseIntermediateDesignerFile>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
 
-    <!-- KRITIKAL PARA SA RUNTIME ROSLYN SCRIPTING SA ANDROID -->
-    <!-- Pinipigilan ang Android Trimmer na burahin ang Roslyn compiler APIs -->
+    <!-- Runtime Roslyn Settings: Bawal i-strip ng trimmer ang Roslyn APIs -->
     <PublishTrimmed>false</PublishTrimmed>
     <RunAOTCompilation>false</RunAOTCompilation>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
 
-    <!-- Stride Engine Environment -->
+    <!-- Stride Engine Configuration -->
     <StridePlatform>Android</StridePlatform>
     <StrideGraphicsApi Condition="'$(StrideGraphicsApi)' == ''">OpenGLES</StrideGraphicsApi>
   </PropertyGroup>
@@ -48,13 +45,7 @@
   <!-- RUNTIME C# SCRIPTING COMPILER (ROSLYN)                   -->
   <!-- ======================================================== -->
   <ItemGroup>
-    <!-- Microsoft.CodeAnalysis.CSharp para sa in-app dynamic compilation -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.12.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all">
-  </ItemGroup>
-
-  <ItemGroup Condition="Exists('Properties\AndroidManifest.xml')">
-    <None Include="Properties\AndroidManifest.xml" />
   </ItemGroup>
 
 </Project>
