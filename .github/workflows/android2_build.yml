@@ -15,33 +15,47 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1. Checkout repository kasama ang submodules
-      - name: Checkout Repository with Submodules
+      # 1. I-checkout ang repo kasama ang SUBMODULES at GIT LFS (KRITIKAL: lfs: true)
+      - name: Checkout Repository with Submodules and LFS
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          lfs: true
           fetch-depth: 0
 
-      # 2. Setup Java JDK 17
+      # 2. Tiyaking na-download ang lahat ng LFS binary dependencies ng Stride
+      - name: Pull Git LFS Objects
+        run: |
+          git lfs install
+          git lfs pull
+
+      # 3. Linisin ang corrupted Temp cache mula sa mga naunang failed runs
+      - name: Clean Stride Temp Cache
+        run: |
+          if (Test-Path "$env:LOCALAPPDATA\Temp\stride") {
+              Remove-Item -Recurse -Force "$env:LOCALAPPDATA\Temp\stride"
+          }
+
+      # 4. Setup Java JDK 17
       - name: Set up Java Development Kit (JDK 17)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Setup .NET 10 SDK (Dahil net10.0 ang Stride Fork mo)
+      # 5. Setup .NET 10 SDK
       - name: Set up .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
           include-prerelease: true
 
-      # 4. I-install ang Android workload para sa .NET 10
+      # 6. I-install ang Android workload para sa .NET 10
       - name: Install .NET Android Workload
         run: |
           dotnet workload install android --verbosity normal
 
-      # 5. Restore Dependencies
+      # 7. Restore Dependencies
       - name: Restore Project Dependencies
         run: |
           dotnet restore ${{ env.PROJECT_PATH }} `
@@ -49,7 +63,7 @@ jobs:
             -p:StrideGraphicsApi=OpenGLES `
             -nr:false
 
-      # 6. I-build at i-publish ang APK nang walang File Lock / Race Condition
+      # 8. Build & Publish APK
       - name: Build & Publish APK
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} `
@@ -64,7 +78,7 @@ jobs:
             -maxcpucount:1 `
             -o ./output/apk
 
-      # 7. I-upload ang APK Artifact
+      # 9. I-upload ang APK Artifact
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
