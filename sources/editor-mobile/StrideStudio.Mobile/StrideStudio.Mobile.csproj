@@ -15,7 +15,7 @@
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
 
-    <!-- KINUKUHA ANG ANDROID MANIFEST MULA SA LABAS (sources/editor-mobile/AndroidManifest.xml) -->
+    <!-- Kinukuha ang manifest sa labas -->
     <AndroidManifest>..\AndroidManifest.xml</AndroidManifest>
 
     <!-- Android Packaging Settings -->
@@ -29,35 +29,29 @@
     <RunAOTCompilation>false</RunAOTCompilation>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
 
-    <!-- Stride Engine Environment Settings -->
+    <!-- Stride Platform -->
     <StridePlatform>Android</StridePlatform>
     <StrideGraphicsApi>OpenGLES</StrideGraphicsApi>
     <StrideGraphicsApis>OpenGLES</StrideGraphicsApis>
   </PropertyGroup>
 
-  <!-- ======================================================== -->
-  <!-- ISINASAMA LAHAT NG .CS AT XML FILES MULA SA LABAS NG FOLDER -->
-  <!-- (MainActivity, EditorGame, Nodes, Scripting, UI)         -->
-  <!-- ======================================================== -->
+  <!-- ISINASAMA ANG LAHAT NG .CS AT MANIFEST SA LABAS -->
   <ItemGroup>
     <Compile Include="..\*.cs" />
     <None Include="..\AndroidManifest.xml" />
   </ItemGroup>
 
-  <!-- ======================================================== -->
-  <!-- STRIDE CORE ENGINE SUBPROJECTS                           -->
-  <!-- ======================================================== -->
+  <!-- STRIDE CORE ENGINE SUBPROJECTS -->
   <ItemGroup>
     <ProjectReference Include="..\..\engine\Stride.Engine\Stride.Engine.csproj" />
+    <ProjectReference Include="..\..\engine\Stride.Games\Stride.Games.csproj" />
     <ProjectReference Include="..\..\engine\Stride.Physics\Stride.Physics.csproj" />
     <ProjectReference Include="..\..\engine\Stride.UI\Stride.UI.csproj" />
     <ProjectReference Include="..\..\engine\Stride.Navigation\Stride.Navigation.csproj" />
     <ProjectReference Include="..\..\engine\Stride.Particles\Stride.Particles.csproj" />
   </ItemGroup>
 
-  <!-- ======================================================== -->
-  <!-- RUNTIME C# SCRIPTING COMPILER (ROSLYN)                   -->
-  <!-- ======================================================== -->
+  <!-- RUNTIME ROSLYN COMPILER -->
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.12.0" />
   </ItemGroup>
