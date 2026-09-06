@@ -1,30 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0-android</TargetFramework>
-    <!-- SOLUSYON SA NETSDK1202: Huwag i-block ang restore/build kahit mas bagong SDK ang gamit -->
-    <CheckEolTargetFramework>false</CheckEolTargetFramework>
-    
-    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
+    <CheckEolWorkloads>false</CheckEolWorkloads>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ApplicationId>com.gasukinani.stridestudio</ApplicationId>
-    <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-    <AndroidPackageFormat>apk</AndroidPackageFormat>
-    <AndroidUseIntermediateDesignerFile>true</AndroidUseIntermediateDesignerFile>
   </PropertyGroup>
 
-  <!-- Buong Engine Modules mula sa iyong Stride Fork -->
   <ItemGroup>
-    <ProjectReference Include="..\..\engine\Stride.Core\Stride.Core.csproj" />
-    <ProjectReference Include="..\..\engine\Stride.Core.Mathematics\Stride.Core.Mathematics.csproj" />
-    <ProjectReference Include="..\..\engine\Stride.Engine\Stride.Engine.csproj" />
-    <ProjectReference Include="..\..\engine\Stride.Graphics\Stride.Graphics.csproj" />
-    <ProjectReference Include="..\..\engine\Stride.Input\Stride.Input.csproj" />
-    <ProjectReference Include="..\..\engine\Stride.Physics\Stride.Physics.csproj" />
-    <ProjectReference Include="..\..\engine\Stride.Audio\Stride.Audio.csproj" />
-    <ProjectReference Include="..\..\engine\Stride.Particles\Stride.Particles.csproj" />
-    <ProjectReference Include="..\..\engine\Stride.UI\Stride.UI.csproj" />
+    <PackageReference Include="Stride.Engine" Version="4.2.*" />
+    <PackageReference Include="Stride.Physics" Version="4.2.*" />
+    <PackageReference Include="Stride.UI" Version="4.2.*" />
+    <!-- Roslyn para sa on-the-fly .cs compilation sa mobile -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
   </ItemGroup>
 </Project>
