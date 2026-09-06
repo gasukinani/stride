@@ -87,6 +87,4 @@ jobs:
           path: |
             **/*.apk
             **/*.aab
-            bin/**/*.dll
-          if-no-files-found: warn            /p:StrideSkipUnitTests=true `
-            /p:StrideSkipAutoPack=true
+          if-no-files-found: warn
