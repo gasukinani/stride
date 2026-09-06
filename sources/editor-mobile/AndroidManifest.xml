@@ -5,12 +5,12 @@
     android:versionName="1.0">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
-    
-    <!-- OpenGL ES 3.0 para sa Stride Engine -->
+
+    <!-- Stride OpenGL ES 3.0 & Hardware Features -->
     <uses-feature android:glEsVersion="0x00030000" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-    <uses-feature android:name="android.hardware.touchscreen.multitouch" android:required="false" />
 
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -19,7 +19,21 @@
         android:icon="@android:drawable/sym_def_app_icon"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
         android:hardwareAccelerated="true">
-        <!-- Kusang idadagdag ng .NET compiler ang MainActivity dito -->
+
+        <!-- KRITIKAL: Explicitly declared Main Launcher Activity -->
+        <activity
+            android:name="com.gasukinani.stridestudio.MainActivity"
+            android:exported="true"
+            android:label="Stride Mobile Studio"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
     </application>
 
 </manifest>
