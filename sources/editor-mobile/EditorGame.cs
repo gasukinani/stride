@@ -4,6 +4,7 @@ using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
 using Stride.Input;
+using Stride.Physics;
 using Stride.Rendering;
 using Stride.Rendering.Lights;
 
@@ -12,65 +13,95 @@ namespace StrideStudio.Mobile
     public class EditorGame : Game
     {
         public bool IsPlaying { get; set; } = false;
-        private Entity? _selectedEntity;
+
         private Entity? _cameraEntity;
         private CameraComponent? _camera;
-        private readonly List<EditorNode> _nodeGraph = new();
+        public Entity? SelectedEntity { get; private set; }
+        private RigidbodyComponent? _selectedRb;
+
+        private ScriptEditorUI? _editorUI;
+        private readonly List<VisualNode> _graphNodes = new();
 
         protected override void BeginRun()
         {
             base.BeginRun();
-            SetupEditorScene();
-            SetupNodeGraphDemo();
+
+            SetupEditorWorld();
+            SetupEditorUI();
         }
 
-        private void SetupEditorScene()
+        private void SetupEditorUI()
+        {
+            _editorUI = new ScriptEditorUI(this);
+
+            var uiEntity = new Entity("ScriptingUIOverlay")
+            {
+                _editorUI.UIComponent
+            };
+            SceneSystem.SceneInstance.RootScene.Entities.Add(uiEntity);
+        }
+
+        private void SetupEditorWorld()
         {
             var scene = new Scene();
 
-            // 1. Setup ng 3D Camera para sa Viewport
+            // Camera
             _cameraEntity = new Entity("EditorCamera")
             {
-                Transform = { Position = new Vector3(0, 3, 7), Rotation = Quaternion.RotationX(-0.3f) }
+                Transform = { Position = new Vector3(0, 4, 8), Rotation = Quaternion.RotationX(-0.35f) }
             };
             _camera = new CameraComponent { UseViewMatrix = false };
             _cameraEntity.Add(_camera);
             scene.Entities.Add(_cameraEntity);
 
-            // 2. Setup ng Directional Light
+            // Light
             var lightEntity = new Entity("MainLight")
             {
-                Transform = { Position = new Vector3(2, 10, 5), Rotation = Quaternion.RotationYawPitchRoll(0.4f, -0.8f, 0) }
+                Transform = { Position = new Vector3(3, 10, 5), Rotation = Quaternion.RotationYawPitchRoll(0.5f, -0.7f, 0) }
             };
-            var light = new LightComponent { Type = new LightDirectional() };
-            lightEntity.Add(light);
+            lightEntity.Add(new LightComponent { Type = new LightDirectional() });
             scene.Entities.Add(lightEntity);
 
-            // 3. Setup ng Default 3D Cube (Preview Object)
-            _selectedEntity = new Entity("PreviewCube")
+            // Static Ground
+            var groundEntity = new Entity("GroundPlane")
             {
-                Transform = { Position = new Vector3(0, 0.5f, 0) }
+                Transform = { Position = new Vector3(0, -0.5f, 0) }
             };
-            
-            var modelComponent = new ModelComponent
+            groundEntity.Add(new ModelComponent
             {
-                Model = GeometricPrimitive.Cube.New(GraphicsDevice).ToModel()
+                Model = GeometricPrimitive.Cube.New(GraphicsDevice, new Vector3(14, 0.2f, 14)).ToModel()
+            });
+            var groundCollider = new StaticColliderComponent();
+            groundCollider.ColliderShapes.Add(new BoxColliderShapeDesc { Size = new Vector3(14, 0.2f, 14), IsStatic = true });
+            groundEntity.Add(groundCollider);
+            scene.Entities.Add(groundEntity);
+
+            // Target Interactive Object
+            SelectedEntity = new Entity("InteractiveCube")
+            {
+                Transform = { Position = new Vector3(0, 2.5f, 0) }
             };
-            _selectedEntity.Add(modelComponent);
-            scene.Entities.Add(_selectedEntity);
+            SelectedEntity.Add(new ModelComponent
+            {
+                Model = GeometricPrimitive.Cube.New(GraphicsDevice, Vector3.One).ToModel()
+            });
+
+            _selectedRb = new RigidbodyComponent
+            {
+                Mass = 1.0f,
+                Restitution = 0.5f,
+                Friction = 0.5f
+            };
+            _selectedRb.ColliderShapes.Add(new BoxColliderShapeDesc { Size = Vector3.One });
+            SelectedEntity.Add(_selectedRb);
+            scene.Entities.Add(SelectedEntity);
 
             SceneSystem.SceneInstance = new SceneInstance(Services, scene);
         }
 
-        private void SetupNodeGraphDemo()
+        public void AddDynamicNode(VisualNode node)
         {
-            // Halimbawa ng Visual Node Script:
-            // Kapag nag-tap sa screen habang naka-PLAY -> Paikutin ang Napiling Entity
-            var touchEventNode = new OnTouchNode();
-            var rotateActionNode = new RotateEntityActionNode();
-
-            touchEventNode.ConnectedActions.Add(rotateActionNode);
-            _nodeGraph.Add(touchEventNode);
+            _graphNodes.Add(node);
         }
 
         protected override void Update(GameTime gameTime)
@@ -78,84 +109,31 @@ namespace StrideStudio.Mobile
             base.Update(gameTime);
             float dt = (float)gameTime.Elapsed.TotalSeconds;
 
-            // --- TOUCH CONTROLS PARA SA ANDROID ---
-            if (Input.PointerEvents.Count > 0)
+            // Touch Camera Navigation sa Edit Mode
+            if (!IsPlaying && Input.PointerEvents.Count > 0)
             {
                 foreach (var pointer in Input.PointerEvents)
                 {
-                    if (pointer.EventType == PointerEventType.Moved && !IsPlaying)
+                    // Tiyakin na hindi nasa ibabaw ng top bar bago mag-orbit
+                    if (pointer.EventType == PointerEventType.Moved && pointer.Position.Y > 0.15f && _cameraEntity != null)
                     {
-                        // Orbit Camera sa Edit Mode kapag nag-drag ang daliri
-                        if (_cameraEntity != null)
-                        {
-                            _cameraEntity.Transform.Rotation *= Quaternion.RotationYawPitchRoll(-pointer.DeltaPosition.X * 2.5f, -pointer.DeltaPosition.Y * 2.5f, 0);
-                        }
-                    }
-                    else if (pointer.EventType == PointerEventType.Pressed)
-                    {
-                        // 2-Finger Tap: Toggle Play / Edit Mode
-                        if (Input.PointerEvents.Count >= 2)
-                        {
-                            IsPlaying = !IsPlaying;
-                        }
-
-                        // Sa Play Mode: I-trigger ang Node Scripts
-                        if (IsPlaying)
-                        {
-                            ExecuteNodes(dt);
-                        }
+                        _cameraEntity.Transform.Rotation *= Quaternion.RotationYawPitchRoll(
+                            -pointer.DeltaPosition.X * 3.0f,
+                            -pointer.DeltaPosition.Y * 3.0f,
+                            0);
                     }
                 }
             }
 
-            // Kapag naka-Play mode, paandarin ang simulation
-            if (IsPlaying && _selectedEntity != null)
+            // Pagpapatakbo ng mga Visual Node scripts kapag naka-Play
+            if (IsPlaying && SelectedEntity != null)
             {
-                _selectedEntity.Transform.Rotation *= Quaternion.RotationY(1.0f * dt);
+                var context = new NodeExecutionContext(SceneSystem.SceneInstance.RootScene, SelectedEntity, Input, dt);
+                foreach (var node in _graphNodes)
+                {
+                    node.Execute(context);
+                }
             }
-        }
-
-        private void ExecuteNodes(float dt)
-        {
-            if (_selectedEntity == null) return;
-
-            foreach (var node in _nodeGraph)
-            {
-                node.Execute(_selectedEntity, dt);
-            }
-        }
-    }
-
-    // ==========================================
-    // VISUAL NODE SCRIPTING SYSTEM ARCHITECTURE
-    // ==========================================
-    public abstract class EditorNode
-    {
-        public string Title { get; set; } = "Node";
-        public List<EditorNode> ConnectedActions { get; } = new();
-        public abstract void Execute(Entity target, float dt);
-    }
-
-    public class OnTouchNode : EditorNode
-    {
-        public OnTouchNode() => Title = "On Screen Touch";
-
-        public override void Execute(Entity target, float dt)
-        {
-            foreach (var action in ConnectedActions)
-            {
-                action.Execute(target, dt);
-            }
-        }
-    }
-
-    public class RotateEntityActionNode : EditorNode
-    {
-        public RotateEntityActionNode() => Title = "Rotate Entity";
-
-        public override void Execute(Entity target, float dt)
-        {
-            target.Transform.Rotation *= Quaternion.RotationZ(0.5f);
         }
     }
 }
