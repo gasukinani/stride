@@ -1,3 +1,4 @@
+
 using System;
 using Stride.Core.Mathematics;
 using Stride.Engine;
