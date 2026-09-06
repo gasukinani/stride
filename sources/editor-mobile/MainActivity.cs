@@ -2,8 +2,11 @@ using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.OS;
+using Android.Util;
 using Android.Views;
 using Stride.Engine;
+using Stride.Games;
+using Stride.Starter;
 
 namespace StrideStudio.Mobile
 {
@@ -19,19 +22,24 @@ namespace StrideStudio.Mobile
     [IntentFilter(
         new[] { Intent.ActionMain },
         Categories = new[] { Intent.CategoryLauncher, Intent.CategoryDefault })]
-    public class MainActivity : Activity
+    public class MainActivity : StrideActivity
     {
-        private EditorGame? _game;
-
         protected override void OnCreate(Bundle? savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
 
-            HideSystemUI();
+            try
+            {
+                HideSystemUI();
 
-            // Simulan ang Stride Game Engine
-            _game = new EditorGame();
-            _game.Run();
+                // KRITIKAL: Inilulunsad ang Stride Game gamit ang Android GameContext mula sa StrideActivity
+                Game = new EditorGame();
+                Game.Run(GameContext);
+            }
+            catch (System.Exception ex)
+            {
+                Log.Error("StrideStudio", $"Crash during startup: {ex}");
+            }
         }
 
         public override void OnWindowFocusChanged(bool hasFocus)
@@ -72,7 +80,7 @@ namespace StrideStudio.Mobile
 
         protected override void OnDestroy()
         {
-            _game?.Dispose();
+            Game?.Dispose();
             base.OnDestroy();
         }
     }
