@@ -1,12 +1,16 @@
-using System;
+            using System;
 using System.Collections.Generic;
 using Stride.Core.Mathematics;
 using Stride.Engine;
+using Stride.Extensions;
 using Stride.Games;
 using Stride.Graphics;
 using Stride.Graphics.GeometricPrimitives;
 using Stride.Input;
 using Stride.Physics;
+using Stride.Rendering;
+using Stride.Rendering.Colors;
+using Stride.Rendering.Lights;
 using Stride.UI;
 using StrideStudio.Mobile.Nodes;
 using StrideStudio.Mobile.Scripting;
@@ -53,14 +57,15 @@ namespace StrideStudio.Mobile
 
             // 1. Viewport Camera
             _cameraEntity = new Entity("ViewportCamera");
-            _camera = new CameraComponent { UseViewMatrix = false, VerticalFieldOfView = 55f };
+            _camera = new CameraComponent { VerticalFieldOfView = 55f };
             _cameraEntity.Add(_camera);
             UpdateCameraTransform();
             _scene.Entities.Add(_cameraEntity);
 
-            // 2. Infinite Ground Grid Visual & Physics Floor
+            // 2. Infinite Ground Grid Floor
             var floor = new Entity("FloorGrid") { Transform = { Position = new Vector3(0, -0.5f, 0) } };
-            floor.Add(new ModelComponent { Model = GeometricPrimitive.Cube.New(GraphicsDevice, new Vector3(50, 1, 50)).ToModel() });
+            var floorMeshDraw = GeometricPrimitive.Cube.New(GraphicsDevice, new Vector3(50, 1, 50)).ToMeshDraw();
+            floor.Add(new ModelComponent { Model = new Model { new Mesh { Draw = floorMeshDraw } } });
             
             var floorCollider = new StaticColliderComponent();
             floorCollider.ColliderShapes.Add(new BoxColliderShapeDesc { Size = new Vector3(50, 1, 50) });
@@ -69,12 +74,13 @@ namespace StrideStudio.Mobile
 
             // 3. Directional Sunlight
             var sun = new Entity("Sun") { Transform = { Position = new Vector3(10, 20, 10), Rotation = Quaternion.RotationYawPitchRoll(0.5f, -0.8f, 0) } };
-            sun.Add(new LightComponent { Type = new LightDirectional { Color = Color.White, Intensity = 2.5f } });
+            sun.Add(new LightComponent { Type = new LightDirectional { Color = new ColorRgbProvider(new Color(1f, 1f, 1f)), Intensity = 2.5f } });
             _scene.Entities.Add(sun);
 
             // 4. Default Interactive Cube (Target Object)
             _selectedEntity = new Entity("InteractiveCube") { Transform = { Position = new Vector3(0, 3, 0) } };
-            _selectedEntity.Add(new ModelComponent { Model = GeometricPrimitive.Cube.New(GraphicsDevice, Vector3.One).ToModel() });
+            var cubeMeshDraw = GeometricPrimitive.Cube.New(GraphicsDevice, Vector3.One).ToMeshDraw();
+            _selectedEntity.Add(new ModelComponent { Model = new Model { new Mesh { Draw = cubeMeshDraw } } });
 
             var rb = new RigidbodyComponent
             {
@@ -94,14 +100,14 @@ namespace StrideStudio.Mobile
 
         private void SetupEditorUI()
         {
-            SpriteFont font = null!;
+            SpriteFont? font = null;
             try
             {
                 font = Content.Load<SpriteFont>("StrideDefaultFont");
             }
             catch
             {
-                font = GraphicsDevice.GetDefaultFont();
+                font = null;
             }
 
             _uiManager = new EditorUIManager(font);
@@ -256,9 +262,17 @@ namespace StrideStudio.Mobile
             var sim = SceneSystem.SceneInstance?.GetProcessor<PhysicsProcessor>()?.Simulation;
             if (sim == null) return;
 
-            _camera.Frustum.GetPickRay(screenPos.X, screenPos.Y, out var ray);
-            var hit = sim.Raycast(ray.Position, ray.Position + (ray.Direction * 100.0f));
+            // Stride Camera Raycast Unprojection
+            Matrix invViewProj = Matrix.Invert(_camera.ViewProjectionMatrix);
+            Vector3 sPos = new Vector3(screenPos.X * 2f - 1f, 1f - screenPos.Y * 2f, 0f);
+            var vectorNear = Vector3.Transform(sPos, invViewProj);
+            vectorNear /= vectorNear.W;
 
+            sPos.Z = 1f;
+            var vectorFar = Vector3.Transform(sPos, invViewProj);
+            vectorFar /= vectorFar.W;
+
+            var hit = sim.Raycast(vectorNear.XYZ(), vectorFar.XYZ());
             if (hit.Succeeded && hit.Collider.Entity != null && hit.Collider.Entity.Name != "FloorGrid")
             {
                 _selectedEntity = hit.Collider.Entity;
