@@ -1,30 +1,40 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- ITUGMA SA STRIDE ENGINE: net10.0-android imbes na net8.0 -->
+    <!-- Target Framework & OS Version -->
     <TargetFramework>net10.0-android</TargetFramework>
     <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
 
     <!-- App Configuration -->
     <ApplicationTitle>Stride Mobile Studio</ApplicationTitle>
     <ApplicationId>com.gasukinani.stridestudio</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
+    
+    <!-- Android Packaging Settings -->
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidUseIntermediateDesignerFile>True</AndroidUseIntermediateDesignerFile>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
+
+    <!-- KRITIKAL PARA SA RUNTIME ROSLYN SCRIPTING SA ANDROID -->
+    <!-- Pinipigilan ang Android Trimmer na burahin ang Roslyn compiler APIs -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
 
     <!-- Stride Engine Environment -->
     <StridePlatform>Android</StridePlatform>
     <StrideGraphicsApi Condition="'$(StrideGraphicsApi)' == ''">OpenGLES</StrideGraphicsApi>
-    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
-    <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
   </PropertyGroup>
 
   <!-- ======================================================== -->
-  <!-- STRIDE CORE ENGINE SUBPROJECTS (PROJECT REFERENCES)      -->
+  <!-- STRIDE CORE ENGINE SUBPROJECTS                           -->
   <!-- ======================================================== -->
   <ItemGroup>
     <ProjectReference Include="..\..\engine\Stride.Engine\Stride.Engine.csproj" />
@@ -35,15 +45,16 @@
   </ItemGroup>
 
   <!-- ======================================================== -->
-  <!-- RUNTIME C# SCRIPTING COMPILER (GUMAGAMIT NG VersionOverride PARA SA CPM) -->
+  <!-- RUNTIME C# SCRIPTING COMPILER (ROSLYN)                   -->
   <!-- ======================================================== -->
   <ItemGroup>
-    <!-- VersionOverride ang tamang paraan sa CPM para hindi masira ang ibang projects -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.8.0" />
+    <!-- Microsoft.CodeAnalysis.CSharp para sa in-app dynamic compilation -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.12.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all">
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="Properties\AndroidManifest.xml" Condition="Exists('Properties\AndroidManifest.xml')" />
+  <ItemGroup Condition="Exists('Properties\AndroidManifest.xml')">
+    <None Include="Properties\AndroidManifest.xml" />
   </ItemGroup>
 
 </Project>
