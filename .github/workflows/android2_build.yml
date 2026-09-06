@@ -41,21 +41,27 @@ jobs:
         run: |
           dotnet workload install android --verbosity normal
 
-      # 5. Restore (WALA NANG -p:ManagePackageVersionsCentrally=false PARA HINDI MAG-NU1015)
+      # 5. Restore Dependencies
       - name: Restore Project Dependencies
         run: |
           dotnet restore ${{ env.PROJECT_PATH }} `
-            -p:StridePlatform=Android
+            -p:StridePlatform=Android `
+            -p:StrideGraphicsApi=OpenGLES `
+            -nr:false
 
-      # 6. I-publish ang APK gamit ang net10.0-android
+      # 6. I-build at i-publish ang APK nang walang File Lock / Race Condition
       - name: Build & Publish APK
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} `
             -c Release `
             -f net10.0-android `
             -p:StridePlatform=Android `
+            -p:StrideGraphicsApi=OpenGLES `
             -p:AndroidPackageFormat=apk `
             -p:AndroidCreatePackagePerAbi=false `
+            -p:UseSharedCompilation=false `
+            -nr:false `
+            -maxcpucount:1 `
             -o ./output/apk
 
       # 7. I-upload ang APK Artifact
