@@ -20,14 +20,15 @@
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
 
-    <!-- Runtime Roslyn Settings: Bawal i-strip ng trimmer ang Roslyn APIs -->
+    <!-- Roslyn Runtime Compilation Support -->
     <PublishTrimmed>false</PublishTrimmed>
     <RunAOTCompilation>false</RunAOTCompilation>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
 
-    <!-- Stride Engine Configuration -->
+    <!-- Stride Engine Environment (Dito ilagay para hindi maipasa sa host net10.0) -->
     <StridePlatform>Android</StridePlatform>
-    <StrideGraphicsApi Condition="'$(StrideGraphicsApi)' == ''">OpenGLES</StrideGraphicsApi>
+    <StrideGraphicsApi>OpenGLES</StrideGraphicsApi>
+    <StrideGraphicsApis>OpenGLES</StrideGraphicsApis>
   </PropertyGroup>
 
   <!-- ======================================================== -->
