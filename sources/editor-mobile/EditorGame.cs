@@ -10,6 +10,7 @@ using Stride.Input;
 using Stride.Physics;
 using Stride.Rendering;
 using Stride.Rendering.Colors;
+using Stride.Rendering.Compositing;
 using Stride.Rendering.Lights;
 using Stride.UI;
 using StrideStudio.Mobile.Nodes;
@@ -42,6 +43,12 @@ namespace StrideStudio.Mobile
         {
             base.BeginRun();
 
+            // KRITIKAL: Pinipigilan ang NullReferenceException crash sa code-only Stride games
+            if (SceneSystem.GraphicsCompositor == null)
+            {
+                SceneSystem.GraphicsCompositor = GraphicsCompositorHelper.CreateDefault(true);
+            }
+
             SetupWorldScene();
             SetupEditorUI();
             SetupDefaultGraph();
@@ -54,6 +61,10 @@ namespace StrideStudio.Mobile
             // 1. Viewport Camera
             _cameraEntity = new Entity("ViewportCamera");
             _camera = new CameraComponent { VerticalFieldOfView = 55f };
+            if (SceneSystem.GraphicsCompositor?.Cameras.Count > 0)
+            {
+                _camera.Slot = SceneSystem.GraphicsCompositor.Cameras[0].ToSlotId();
+            }
             _cameraEntity.Add(_camera);
             UpdateCameraTransform();
             _scene.Entities.Add(_cameraEntity);
@@ -77,7 +88,7 @@ namespace StrideStudio.Mobile
             });
             _scene.Entities.Add(sun);
 
-            // 4. Default Interactive Cube (Target Object)
+            // 4. Default Interactive Cube
             _selectedEntity = new Entity("InteractiveCube") { Transform = { Position = new Vector3(0, 3, 0) } };
             var cubeMeshDraw = GeometricPrimitive.Cube.New(GraphicsDevice, Vector3.One).ToMeshDraw();
             _selectedEntity.Add(new ModelComponent { Model = new Model { new Mesh { Draw = cubeMeshDraw } } });
