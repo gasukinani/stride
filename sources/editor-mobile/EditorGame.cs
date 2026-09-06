@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Stride.Core.Mathematics;
 using Stride.Engine;
+using Stride.Games;
 using Stride.Graphics;
 using Stride.Graphics.GeometricPrimitives;
 using Stride.Input;
@@ -85,7 +86,6 @@ namespace StrideStudio.Mobile
             _selectedEntity.Add(rb);
             _scene.Entities.Add(_selectedEntity);
 
-            // I-save ang initial snapshot
             _origPos = _selectedEntity.Transform.Position;
             _origRot = _selectedEntity.Transform.Rotation;
 
@@ -94,7 +94,6 @@ namespace StrideStudio.Mobile
 
         private void SetupEditorUI()
         {
-            // Safe Font loading para hindi mag-crash kung walang asset file
             SpriteFont font = null!;
             try
             {
@@ -102,7 +101,6 @@ namespace StrideStudio.Mobile
             }
             catch
             {
-                // Fallback sa GraphicsDevice debug font
                 font = GraphicsDevice.GetDefaultFont();
             }
 
@@ -112,7 +110,6 @@ namespace StrideStudio.Mobile
             _uiManager.OnStopClicked += StopSimulation;
             _uiManager.OnCompileCodeClicked += HandleCodeCompilation;
 
-            // UI Entity sa Scene
             var uiEntity = new Entity("EditorUI");
             var uiComp = new UIComponent { Page = _uiManager.Page, IsFullScreen = true };
             uiEntity.Add(uiComp);
@@ -211,7 +208,7 @@ namespace StrideStudio.Mobile
         {
             if (_uiManager.CodeEditorPanel.Visibility == Visibility.Visible) return;
 
-            // Pinch Zoom (2 fingers)
+            // Pinch Zoom
             if (Input.PointerEvents.Count >= 2)
             {
                 var p1 = Input.PointerEvents[0];
@@ -229,7 +226,7 @@ namespace StrideStudio.Mobile
                 return;
             }
 
-            // Orbit Camera Drag (1 finger)
+            // Orbit Drag
             if (Input.PointerEvents.Count == 1 && !IsPlaying)
             {
                 var p = Input.PointerEvents[0];
