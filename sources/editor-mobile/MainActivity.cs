@@ -1,4 +1,5 @@
 using Android.App;
+using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Stride.Engine;
@@ -15,6 +16,9 @@ namespace StrideStudio.Mobile
         Theme = "@android:style/Theme.NoTitleBar.Fullscreen",
         ScreenOrientation = ScreenOrientation.Landscape,
         ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.KeyboardHidden | ConfigChanges.ScreenLayout)]
+    [IntentFilter(
+        new[] { Intent.ActionMain },
+        Categories = new[] { Intent.CategoryLauncher, Intent.CategoryDefault })]
     public class MainActivity : AndroidGameActivity
     {
         private EditorGame? _game;
@@ -23,7 +27,6 @@ namespace StrideStudio.Mobile
         {
             base.OnCreate(savedInstanceState);
 
-            // Inilulunsad ang Stride Engine
             _game = new EditorGame();
             _game.Run(GameContext);
         }
